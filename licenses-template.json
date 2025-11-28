@@ -1,0 +1,10 @@
+[
+  {
+    "systemId": "ejemplo1234567890",
+    "key": "DEMO-12345-ABCDE",
+    "active": true,
+    "client": "Cliente Demo",
+    "activationDate": "2025-11-27",
+    "notes": "Licencia de ejemplo"
+  }
+]

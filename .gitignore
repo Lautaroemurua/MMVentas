@@ -1,0 +1,46 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+build/
+out/
+
+# Base de datos local
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de configuración local
+.env
+.env.local
+
+# Archivos temporales
+tmp/
+temp/
+
+# NO subir generadores de licencias (solo para uso interno)
+GENERADOR_LICENCIAS.html
+GENERADOR_LICENCIAS_V2.html
+
+# Scripts de testing de licencias (mantener para desarrollo)
+# test-license.js
+# force-expire.js
+# reset-license.js

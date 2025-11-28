@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Ventas - MMVentas</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🛒 Sistema de Ventas</h1>
+      <div id="trial-info" class="trial-info" style="display: none;"></div>
+      <div class="header-buttons">
+        <button id="btn-modificadores" class="btn-secondary">📝 Modificadores</button>
+        <button id="btn-configuracion" class="btn-secondary">⚙️ Configuración</button>
+        <button id="btn-gestionar-productos" class="btn-secondary">Gestionar Productos</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Sección de Nueva Venta -->
+      <section class="venta-section">
+        <h2>Nueva Venta</h2>
+        
+        <div class="form-group">
+          <label for="producto-buscar">Buscar Producto (por nombre o ID):</label>
+          <input 
+            type="text" 
+            id="producto-buscar" 
+            class="form-control" 
+            placeholder="Escribe para buscar..."
+            autocomplete="off"
+          >
+          <div id="resultados-busqueda" class="resultados-busqueda"></div>
+        </div>
+
+        <div class="producto-seleccionado" id="producto-seleccionado-info" style="display: none;">
+          <div class="producto-card">
+            <div class="producto-detalle">
+              <span class="producto-id">ID: <strong id="selected-id"></strong></span>
+              <span class="producto-nombre" id="selected-nombre"></span>
+              <span class="producto-precio">$<span id="selected-precio"></span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modificadores dinámicos -->
+        <div id="modificadores-container" style="display: none;">
+          <h3 style="margin: 15px 0 10px 0; color: #667eea; font-size: 16px;">✏️ Personalizar Pedido:</h3>
+          <div id="modificadores-list" class="modificadores-list"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cantidad-input">Cantidad:</label>
+            <input type="number" id="cantidad-input" class="form-control" value="1" min="1">
+          </div>
+          <div class="form-group align-end">
+            <button id="btn-agregar" class="btn-primary" disabled>Agregar al Ticket</button>
+          </div>
+        </div>
+
+        <!-- Tabla de Items del Ticket -->
+        <div class="ticket-container">
+          <h3>Ticket Actual</h3>
+          <table id="tabla-ticket">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+                <th>Subtotal</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="ticket-body">
+              <tr class="empty-row">
+                <td colspan="5">No hay items en el ticket</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="total-container">
+            <div class="total-label">TOTAL:</div>
+            <div class="total-amount" id="total-amount">$0.00</div>
+          </div>
+
+          <div class="action-buttons">
+            <button id="btn-cancelar" class="btn-danger" disabled>Cancelar Venta</button>
+            <button id="btn-finalizar" class="btn-success" disabled>Finalizar e Imprimir</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sección de Historial -->
+      <section class="historial-section">
+        <h2>Últimas Ventas</h2>
+        <div id="historial-container" class="historial-list">
+          <p class="loading">Cargando ventas...</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal de Código de Barras -->
+  <div id="modal-codigo-barras" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2>📊 Código de Barras Detectado</h2>
+        <button class="btn-close" id="btn-cerrar-modal-barcode">&times;</button>
+      </div>
+      
+      <div class="modal-body" style="text-align: center; padding: 30px 20px;">
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">Código escaneado:</div>
+          <div id="barcode-escaneado" style="font-family: monospace; font-size: 24px; font-weight: bold; color: #333; background: white; padding: 15px; border-radius: 6px; border: 2px dashed #667eea;"></div>
+        </div>
+
+        <div id="barcode-producto-info" style="display: none; margin: 20px 0;">
+          <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px;">
+            <div style="font-size: 16px; font-weight: bold; color: #155724; margin-bottom: 8px;">✅ Producto encontrado</div>
+            <div id="barcode-producto-nombre" style="font-size: 18px; color: #333; margin: 5px 0;"></div>
+            <div id="barcode-producto-precio" style="font-size: 16px; color: #666;"></div>
+          </div>
+        </div>
+
+        <div id="barcode-producto-noexiste" style="display: none; margin: 20px 0;">
+          <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px;">
+            <div style="font-size: 16px; font-weight: bold; color: #856404; margin-bottom: 5px;">⚠️ Producto no encontrado</div>
+            <div style="font-size: 14px; color: #666;">Este código de barras no está asociado a ningún producto</div>
+          </div>
+        </div>
+
+        <div class="form-buttons" id="barcode-actions" style="margin-top: 25px; gap: 10px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Configuración -->
+  <div id="modal-configuracion" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ Configuración del Sistema</h2>
+        <button class="btn-close" id="btn-cerrar-modal-config">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="config-section">
+          <h3>Información del Negocio</h3>
+          
+          <div class="form-group">
+            <label for="nombre-negocio">Nombre del Negocio:</label>
+            <input type="text" id="nombre-negocio" class="form-control" placeholder="Ej: Mi Tienda">
+          </div>
+
+          <div class="form-group">
+            <label for="pie-pagina">Pie de Página del Ticket:</label>
+            <input type="text" id="pie-pagina" class="form-control" placeholder="¡Gracias por su compra!">
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>Logo del Negocio</h3>
+          <p class="config-help">El logo aparecerá en la parte superior de cada ticket impreso. Tamaño recomendado: 200x100 píxeles.</p>
+          
+          <div class="logo-preview-container">
+            <div id="logo-preview" class="logo-preview">
+              <span class="no-logo">Sin logo configurado</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <input type="file" id="logo-input" accept="image/*" style="display: none;">
+            <button class="btn-primary" id="btn-seleccionar-logo">📷 Seleccionar Logo</button>
+            <button class="btn-danger" id="btn-eliminar-logo" style="display: none;">🗑️ Eliminar Logo</button>
+          </div>
+        </div>
+
+        <div class="config-actions">
+          <button class="btn-secondary" id="btn-cancelar-config">Cancelar</button>
+          <button class="btn-success" id="btn-guardar-config">Guardar Configuración</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Modificadores -->
+  <div id="modal-modificadores" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📝 Gestionar Modificadores</h2>
+        <button class="btn-close" id="btn-cerrar-modal-modificadores">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="info-box" style="background: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+          <strong>💡 ¿Qué son los modificadores?</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px; color: #555;">
+            Opciones que el cliente puede agregar o quitar de un producto:<br>
+            <em>Ejemplos: "Sin cebolla", "Con extra queso", "Cocción: jugoso", "Tamaño: grande"</em>
+          </p>
+        </div>
+
+        <div class="producto-form">
+          <h3 id="form-title-mod">Agregar Nuevo Modificador</h3>
+          
+          <div class="form-group">
+            <label for="modificador-nombre">Nombre del Modificador:</label>
+            <input type="text" id="modificador-nombre" class="form-control" placeholder="Ej: Sin lechuga, Extra queso, Cocción">
+          </div>
+
+          <div class="form-group">
+            <label for="modificador-tipo">Tipo:</label>
+            <select id="modificador-tipo" class="form-control">
+              <option value="texto">Texto libre (ej: comentarios especiales)</option>
+              <option value="opciones">Opciones predefinidas - Select (ej: tamaño, cocción)</option>
+              <option value="checkbox">Checkboxes múltiples (ej: sin cebolla, con extra)</option>
+            </select>
+            <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+              💡 Tip: "Opciones" = un solo select. "Checkboxes" = marcar varios a la vez.
+            </small>
+          </div>
+
+          <div class="form-group" id="opciones-group" style="display: none;">
+            <label>Opciones disponibles:</label>
+            <div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+              <div style="margin-bottom: 10px;">
+                <strong style="font-size: 13px; color: #333;">📋 Opciones creadas:</strong>
+              </div>
+              <div style="max-height: 200px; overflow-y: auto; background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 10px;" id="opciones-disponibles-list">
+                <p style="color: #999; text-align: center; padding: 20px 10px;">No hay opciones creadas</p>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <input type="text" id="nueva-opcion-input" class="form-control" placeholder="Nueva opción (ej: Pequeño, Mediano, Grande)" style="flex: 1;">
+                <button type="button" id="btn-agregar-opcion" class="btn-primary" style="white-space: nowrap; padding: 8px 16px;">➕ Agregar</button>
+              </div>
+            </div>
+            <small style="color: #666; font-size: 12px; display: block; margin-top: 8px;">✓ Marca las opciones que este modificador utilizará</small>
+          </div>
+
+          <div class="form-group">
+            <label for="modificador-precio">Precio Adicional (opcional):</label>
+            <input type="number" id="modificador-precio" class="form-control" placeholder="0.00" step="0.01" min="0" value="0">
+            <small style="color: #666; font-size: 12px;">Deja en 0 si no tiene costo extra</small>
+          </div>
+
+          <div class="form-buttons">
+            <button id="btn-cancelar-mod" class="btn-secondary">Cancelar</button>
+            <button id="btn-guardar-modificador" class="btn-primary">Guardar Modificador</button>
+          </div>
+        </div>
+
+        <div class="productos-list">
+          <h3>Modificadores Activos</h3>
+          <table id="tabla-modificadores">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Precio +</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="modificadores-body">
+              <tr>
+                <td colspan="4">Cargando modificadores...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Gestión de Productos -->
+  <div id="modal-productos" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Gestionar Productos</h2>
+        <button class="btn-close" id="btn-cerrar-modal">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Formulario para Agregar/Editar Producto -->
+        <div class="producto-form">
+          <h3 id="form-title">Agregar Nuevo Producto</h3>
+          <input type="hidden" id="producto-id-edit">
+          
+          <div class="form-group">
+            <label for="producto-nombre">Nombre del Producto:</label>
+            <input type="text" id="producto-nombre" class="form-control" placeholder="Ej: Coca Cola 500ml">
+          </div>
+          
+          <div class="form-group">
+            <label for="producto-precio">Precio:</label>
+            <input type="number" id="producto-precio" class="form-control" placeholder="0.00" step="0.01" min="0">
+          </div>
+
+          <div class="form-group">
+            <label for="producto-codigo-barras">Código de Barras (opcional):</label>
+            <input type="text" id="producto-codigo-barras" class="form-control" placeholder="Escanea con la pistola o escribe el código">
+            <small style="color: #666; font-size: 12px;">📱 Puedes escanear directamente con el lector de código de barras</small>
+          </div>
+          
+          <div class="form-buttons">
+            <button id="btn-cancelar-edit" class="btn-secondary">Cancelar</button>
+            <button id="btn-guardar-producto" class="btn-primary">Guardar Producto</button>
+          </div>
+        </div>
+
+        <!-- Lista de Productos -->
+        <div class="productos-list">
+          <h3>Productos Existentes</h3>
+          <table id="tabla-productos">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Precio</th>
+                <th>Cód. Barras</th>
+                <th>Mods</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="productos-body">
+              <tr>
+                <td colspan="4">Cargando productos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Modificadores por Producto -->
+  <div id="modal-producto-modificadores" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>✏️ Modificadores de: <span id="producto-mods-nombre"></span></h2>
+        <button class="btn-close" id="btn-cerrar-modal-producto-mods">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <p style="color: #666; margin-bottom: 20px;">Selecciona qué modificadores estarán disponibles para este producto:</p>
+        
+        <div id="lista-modificadores-disponibles" class="modificadores-checklist">
+          <!-- Se llenará dinámicamente -->
+        </div>
+        
+        <div class="form-buttons" style="margin-top: 25px;">
+          <button id="btn-cancelar-producto-mods" class="btn-secondary">Cancelar</button>
+          <button id="btn-guardar-producto-mods" class="btn-primary">Guardar Modificadores</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

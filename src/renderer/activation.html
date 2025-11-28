@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activar Sistema</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    .activation-container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .info-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #667eea;
+    }
+
+    .info-box label {
+      font-size: 12px;
+      color: #666;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .info-box .system-id {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+      background: white;
+      padding: 8px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      display: none;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="activation-container">
+    <h2>🔐 Activación del Sistema</h2>
+    
+    <div class="info-box">
+      <label>ID del Sistema:</label>
+      <div class="system-id" id="system-id">Cargando...</div>
+    </div>
+
+    <div class="form-group">
+      <label for="activation-code">Código de Activación:</label>
+      <input 
+        type="text" 
+        id="activation-code" 
+        class="form-control" 
+        placeholder="Ingrese el código"
+        maxlength="20"
+      >
+    </div>
+
+    <div class="btn-container">
+      <button class="btn-secondary" id="btn-cancel">Cancelar</button>
+      <button class="btn-primary" id="btn-activate">Activar</button>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div class="help-text">
+      Contacte a soporte con el ID del sistema para obtener su código de activación.
+    </div>
+  </div>
+
+  <script>
+    const systemIdElement = document.getElementById('system-id');
+    const activationCodeInput = document.getElementById('activation-code');
+    const btnCancel = document.getElementById('btn-cancel');
+    const btnActivate = document.getElementById('btn-activate');
+    const messageElement = document.getElementById('message');
+
+    // Cargar System ID
+    window.api.obtenerSystemId().then(systemId => {
+      systemIdElement.textContent = systemId;
+    });
+
+    // Cancelar
+    btnCancel.addEventListener('click', () => {
+      window.close();
+    });
+
+    // Activar
+    btnActivate.addEventListener('click', async () => {
+      const codigo = activationCodeInput.value.trim().toUpperCase();
+      
+      if (!codigo) {
+        showMessage('Por favor ingrese un código de activación', 'error');
+        return;
+      }
+
+      btnActivate.disabled = true;
+      btnActivate.textContent = 'Activando...';
+
+      const result = await window.api.activarSistema(codigo);
+
+      if (result.success) {
+        showMessage('¡Sistema activado correctamente!', 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        showMessage(result.message || 'Código de activación inválido', 'error');
+        btnActivate.disabled = false;
+        btnActivate.textContent = 'Activar';
+      }
+    });
+
+    // Enter para activar
+    activationCodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        btnActivate.click();
+      }
+    });
+
+    function showMessage(text, type) {
+      messageElement.textContent = text;
+      messageElement.className = 'message ' + type;
+      messageElement.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
