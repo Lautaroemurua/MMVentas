@@ -165,11 +165,67 @@ async function activateLicense(licenseKey) {
       return { success: true, message: 'Sistema activado correctamente' };
     }
     
-    return { success: false, message: 'Código de activación inválido' };
+    return { success: false, message: 'Código de activación inválido. Verifique el código e intente nuevamente.' };
   } catch (error) {
-    // Si no hay internet, intentar validación offline como fallback
-    return { success: false, message: 'Error de conexión. Verifique su internet e intente nuevamente.' };
+    console.error('Error en activación:', error);
+    
+    // Fallback: Validación local/offline si el servidor no está disponible
+    const isValidOffline = validateLicenseOffline(systemId, licenseKey);
+    
+    if (isValidOffline) {
+      state.activated = true;
+      state.licenseKey = licenseKey;
+      state.activationDate = Date.now();
+      saveLicenseState(state);
+      return { success: true, message: 'Sistema activado correctamente (modo offline)' };
+    }
+    
+    // Si hay error de conexión
+    if (error.message.includes('Timeout') || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+      return { success: false, message: 'Error de conexión. Verifique su internet e intente nuevamente.' };
+    }
+    // Otros errores (archivo no encontrado, JSON inválido, etc.)
+    return { success: false, message: 'Código de activación inválido.' };
   }
+}
+
+// Validación offline usando el mismo algoritmo de generación
+function validateLicenseOffline(systemId, licenseKey) {
+  const SECRET = 'MMV_2025_LICENSE_SECRET_KEY_DO_NOT_SHARE';
+  const parts = licenseKey.split('-');
+  
+  if (parts.length !== 5) return false;
+  
+  // Verificar que el prefijo coincida con el systemId
+  const prefix = parts[0].toLowerCase();
+  if (prefix !== systemId.substring(0, 4)) return false;
+  
+  // Unir la firma completa (16 caracteres)
+  const providedSignature = parts.slice(1).join('').toLowerCase();
+  
+  // Verificar que la firma tenga el formato correcto (16 caracteres hex)
+  if (providedSignature.length !== 16 || !/^[0-9a-f]+$/.test(providedSignature)) return false;
+  
+  // Lista de timestamps válidos conocidos (puedes agregar más)
+  // Por ahora, aceptar cualquier licencia con formato válido en modo desarrollo
+  const validTimestamps = [
+    1732824000000, // Timestamp base
+    Date.now()
+  ];
+  
+  for (const timestamp of validTimestamps) {
+    const data = `${systemId}-${timestamp}`;
+    const hmac = crypto.createHmac('sha256', SECRET);
+    hmac.update(data);
+    const expectedSignature = hmac.digest('hex').substring(0, 16);
+    
+    if (expectedSignature === providedSignature) {
+      return true;
+    }
+  }
+  
+  // No validar offline - forzar validación online
+  return false;
 }
 
 // Validar licencia contra servidor online
@@ -177,16 +233,26 @@ async function validateLicenseOnline(systemId, licenseKey) {
   return new Promise((resolve, reject) => {
     const https = require('https');
     
-    // URL de tu archivo de licencias en GitHub (raw)
-    // Formato: https://raw.githubusercontent.com/USUARIO/REPO/main/licenses.json
+    // Leer token desde variable de entorno (configurada en el sistema)
+    // Para configurar: setx MMVENTAS_GITHUB_TOKEN "tu_token_aqui"
+    const token = process.env.MMVENTAS_GITHUB_TOKEN;
+    
+    const headers = {
+      'User-Agent': 'MMVentas-System',
+      'Cache-Control': 'no-cache'
+    };
+    
+    // Si hay token, usar API de GitHub (para repo privado)
+    if (token) {
+      headers['Authorization'] = `token ${token}`;
+      headers['Accept'] = 'application/vnd.github.v3.raw';
+    }
+    
     const options = {
       hostname: 'raw.githubusercontent.com',
-      path: '/TU_USUARIO/MMVentas-Licenses/main/licenses.json',
+      path: '/Lautaroemurua/MMVentas-Licenses/main/licenses.json',
       method: 'GET',
-      headers: {
-        'User-Agent': 'MMVentas-System',
-        'Cache-Control': 'no-cache'
-      },
+      headers: headers,
       timeout: 5000
     };
 

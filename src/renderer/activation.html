@@ -75,17 +75,24 @@
 
     .form-control {
       width: 100%;
-      padding: 12px;
+      padding: 15px 10px;
       border: 2px solid #ddd;
       border-radius: 8px;
-      font-size: 14px;
-      font-family: 'Courier New', monospace;
+      font-size: 17px;
+      font-family: 'Courier New', 'Consolas', monospace;
       text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+      font-weight: bold;
+      background: #f8f9fa;
+      box-sizing: border-box;
     }
 
     .form-control:focus {
       outline: none;
       border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
     .btn-container {
@@ -163,8 +170,8 @@
         type="text" 
         id="activation-code" 
         class="form-control" 
-        placeholder="Ingrese el código"
-        maxlength="20"
+        placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
+        maxlength="30"
       >
     </div>
 
