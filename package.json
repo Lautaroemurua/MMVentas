@@ -1,6 +1,6 @@
 {
   "name": "mmventas",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sistema de ventas con Electron",
   "main": "src/main/main.js",
   "repository": {
@@ -25,7 +25,6 @@
       "target": [
         "nsis"
       ],
-      "icon": "build/icon.ico",
       "publish": [
         "github"
       ]

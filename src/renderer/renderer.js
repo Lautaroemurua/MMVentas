@@ -100,7 +100,7 @@ async function init() {
   configurarEventos();
   configurarDetectorCodigoBarras();
   actualizarInfoTrial();
-  setInterval(actualizarInfoTrial, 60000); // Actualizar cada minuto
+  setInterval(actualizarInfoTrial, 60000); // Actualizar cada minuto (cuenta regresiva)
 }
 
 // Cargar configuración
@@ -134,9 +134,33 @@ async function actualizarInfoTrial() {
   
   if (trialInfo.active) {
     trialElement.style.display = 'block';
-    const horasText = trialInfo.hours > 0 ? `${trialInfo.hours}h ` : '';
-    const minutosText = `${trialInfo.minutes}min`;
-    trialElement.innerHTML = `⏱️ <strong>Período de prueba:</strong> ${horasText}${minutosText} restantes`;
+    
+    // Si quedan menos de 24h, mostrar advertencia en rojo con cuenta regresiva detallada
+    if (trialInfo.warning) {
+      const horasText = trialInfo.hours > 0 ? `${trialInfo.hours}h ` : '';
+      const minutosText = `${trialInfo.minutes}min`;
+      trialElement.style.background = '#dc3545';
+      trialElement.style.color = 'white';
+      trialElement.style.fontWeight = 'bold';
+      trialElement.style.padding = '12px 20px';
+      trialElement.style.animation = 'pulse 2s infinite';
+      trialElement.innerHTML = `⚠️ <strong>¡ADVERTENCIA!</strong> Licencia expira en: ${horasText}${minutosText}`;
+    } else {
+      // Mostrar info normal con días restantes
+      const diasText = trialInfo.days > 0 ? `${trialInfo.days} día${trialInfo.days !== 1 ? 's' : ''}` : '';
+      const horasText = trialInfo.hours > 0 ? `${trialInfo.hours}h` : '';
+      trialElement.style.background = '#f0f8ff';
+      trialElement.style.color = '#333';
+      trialElement.style.fontWeight = 'normal';
+      trialElement.style.padding = '8px 15px';
+      trialElement.style.animation = 'none';
+      
+      if (trialInfo.days > 0) {
+        trialElement.innerHTML = `⏱️ <strong>Período de prueba:</strong> ${diasText} ${horasText} restantes`;
+      } else {
+        trialElement.innerHTML = `⏱️ <strong>Período de prueba:</strong> ${horasText} ${trialInfo.minutes}min restantes`;
+      }
+    }
   } else {
     trialElement.style.display = 'none';
   }

@@ -4,7 +4,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const LICENSE_FILE = path.join(app.getPath('userData'), '.sys');
-const TRIAL_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+const TRIAL_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 días
+const WARNING_THRESHOLD = 24 * 60 * 60 * 1000; // Avisar 24h antes
 
 // Obtener identificador único del sistema
 function getSystemId() {
@@ -131,6 +132,7 @@ function checkLicense() {
       valid: true,
       trial: true,
       remaining: remaining,
+      warning: remaining <= WARNING_THRESHOLD, // Avisar si quedan menos de 24h
       systemId: systemId
     };
   }
@@ -349,13 +351,16 @@ async function notifyExpiration(systemId) {
 function getTrialInfo() {
   const status = checkLicense();
   if (status.trial && status.remaining) {
-    const hours = Math.floor(status.remaining / (60 * 60 * 1000));
+    const days = Math.floor(status.remaining / (24 * 60 * 60 * 1000));
+    const hours = Math.floor((status.remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
     const minutes = Math.floor((status.remaining % (60 * 60 * 1000)) / (60 * 1000));
     return {
       active: true,
+      days,
       hours,
       minutes,
-      remaining: status.remaining
+      remaining: status.remaining,
+      warning: status.warning || false
     };
   }
   return { active: false };
