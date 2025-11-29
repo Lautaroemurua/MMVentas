@@ -265,19 +265,30 @@ async function validateLicenseOnline(systemId, licenseKey) {
 
       res.on('end', () => {
         try {
+          console.log('[LICENSE] GitHub Response Status:', res.statusCode);
+          console.log('[LICENSE] Token present:', !!token);
+          
           if (res.statusCode === 200) {
             const licenses = JSON.parse(data);
+            console.log('[LICENSE] Licenses loaded:', licenses.length);
+            console.log('[LICENSE] Looking for systemId:', systemId);
+            console.log('[LICENSE] Looking for key:', licenseKey);
             
             // Buscar la licencia en el archivo
-            const validLicense = licenses.find(l => 
-              l.systemId === systemId && l.key === licenseKey && l.active === true
-            );
+            const validLicense = licenses.find(l => {
+              const match = l.systemId === systemId && l.key === licenseKey && l.active === true;
+              console.log('[LICENSE] Checking:', l.key, '→', match);
+              return match;
+            });
             
+            console.log('[LICENSE] Valid license found:', !!validLicense);
             resolve(!!validLicense);
           } else {
+            console.log('[LICENSE] Response data:', data);
             reject(new Error('Error al obtener licencias'));
           }
         } catch (error) {
+          console.log('[LICENSE] Parse error:', error.message);
           reject(error);
         }
       });

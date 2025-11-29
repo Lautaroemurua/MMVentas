@@ -1,4 +1,8 @@
+// Cargar variables de entorno desde .env
+require('dotenv').config();
+
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const Database = require('better-sqlite3');
 const license = require('./license');
@@ -70,9 +74,17 @@ function initDatabase() {
     CREATE TABLE IF NOT EXISTS opciones_predefinidas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL UNIQUE,
+      precio_adicional REAL DEFAULT 0,
       activo INTEGER DEFAULT 1
     )
   `);
+
+  // Agregar columna precio_adicional si no existe (para bases de datos existentes)
+  try {
+    db.exec(`ALTER TABLE opciones_predefinidas ADD COLUMN precio_adicional REAL DEFAULT 0`);
+  } catch (e) {
+    // Columna ya existe, ignorar error
+  }
 
   // Crear tabla de relación producto-modificadores
   db.exec(`
@@ -165,6 +177,19 @@ async function showActivationDialog() {
     });
 
     activationWindow.loadFile(path.join(__dirname, '../renderer/activation.html'));
+    
+    // Cuando se cierre la ventana de activación, revisar estado
+    activationWindow.on('closed', () => {
+      licenseStatus = license.checkLicense();
+      if (licenseStatus && licenseStatus.valid && !licenseStatus.trial) {
+        // Activado exitosamente - iniciar app
+        initDatabase();
+        createWindow();
+      } else {
+        // No activado - salir
+        app.quit();
+      }
+    });
   } else {
     app.quit();
   }
@@ -189,6 +214,43 @@ function createWindow() {
   }
 }
 
+// Configurar auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on('update-available', (info) => {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Actualización disponible',
+    message: `Nueva versión ${info.version} disponible`,
+    detail: '¿Desea descargar e instalar la actualización?',
+    buttons: ['Descargar', 'Más tarde']
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.downloadUpdate();
+    }
+  });
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  const percent = Math.round(progress.percent);
+  mainWindow.setProgressBar(percent / 100);
+});
+
+autoUpdater.on('update-downloaded', () => {
+  mainWindow.setProgressBar(-1);
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Actualización lista',
+    message: 'La actualización se instalará al cerrar la aplicación',
+    buttons: ['Reiniciar ahora', 'Más tarde']
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
 // Eventos de la aplicación
 app.whenReady().then(async () => {
   await checkAndShowLicense();
@@ -196,6 +258,11 @@ app.whenReady().then(async () => {
   if (licenseStatus && licenseStatus.valid) {
     initDatabase();
     createWindow();
+    
+    // Verificar actualizaciones después de 3 segundos
+    setTimeout(() => {
+      autoUpdater.checkForUpdates();
+    }, 3000);
   }
 
   app.on('activate', () => {
@@ -562,19 +629,26 @@ ipcMain.handle('eliminar-modificador', (event, id) => {
 
 // IPC Handlers - Opciones Predefinidas
 ipcMain.handle('obtener-opciones-predefinidas', () => {
-  const opciones = db.prepare('SELECT * FROM opciones_predefinidas WHERE activo = 1 ORDER BY nombre').all();
+  const opciones = db.prepare('SELECT id, nombre, precio_adicional, activo FROM opciones_predefinidas WHERE activo = 1 ORDER BY nombre').all();
   return opciones;
 });
 
-ipcMain.handle('crear-opcion-predefinida', (event, nombre) => {
-  const insert = db.prepare('INSERT INTO opciones_predefinidas (nombre) VALUES (?)');
-  const result = insert.run(nombre);
-  return { id: result.lastInsertRowid, nombre };
+ipcMain.handle('crear-opcion-predefinida', (event, nombre, precio) => {
+  const precioFinal = precio || 0;
+  const insert = db.prepare('INSERT INTO opciones_predefinidas (nombre, precio_adicional) VALUES (?, ?)');
+  const result = insert.run(nombre, precioFinal);
+  return { id: result.lastInsertRowid, nombre, precio_adicional: precioFinal };
 });
 
 ipcMain.handle('eliminar-opcion-predefinida', (event, id) => {
   const update = db.prepare('UPDATE opciones_predefinidas SET activo = 0 WHERE id = ?');
   update.run(id);
+  return { success: true };
+});
+
+ipcMain.handle('actualizar-precio-opcion', (event, id, precio) => {
+  const update = db.prepare('UPDATE opciones_predefinidas SET precio_adicional = ? WHERE id = ?');
+  update.run(precio, id);
   return { success: true };
 });
 

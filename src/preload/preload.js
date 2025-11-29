@@ -34,8 +34,9 @@ contextBridge.exposeInMainWorld('api', {
 
   // Opciones Predefinidas
   obtenerOpcionesPredefinidas: () => ipcRenderer.invoke('obtener-opciones-predefinidas'),
-  crearOpcionPredefinida: (nombre) => ipcRenderer.invoke('crear-opcion-predefinida', nombre),
+  crearOpcionPredefinida: (nombre, precio) => ipcRenderer.invoke('crear-opcion-predefinida', nombre, precio),
   eliminarOpcionPredefinida: (id) => ipcRenderer.invoke('eliminar-opcion-predefinida', id),
+  actualizarPrecioOpcion: (id, precio) => ipcRenderer.invoke('actualizar-precio-opcion', id, precio),
 
   // Producto-Modificadores
   obtenerModificadoresProducto: (productoId) => ipcRenderer.invoke('obtener-modificadores-producto', productoId),

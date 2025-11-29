@@ -228,6 +228,11 @@ async function seleccionarProducto(id) {
   cantidadInput.focus();
 }
 
+// Helper para devolver foco al input de búsqueda
+function devolverFocoABusqueda() {
+  setTimeout(() => productoBuscar.focus(), 50);
+}
+
 // Mostrar modificadores de un producto específico
 function mostrarModificadoresProducto(modsProducto) {
   if (modsProducto.length === 0) {
@@ -254,24 +259,35 @@ function mostrarModificadores() {
 }
 
 // Renderizar modificadores en el DOM
-function renderizarModificadores(mods) {
+async function renderizarModificadores(mods) {
   console.log('Generando HTML para modificadores...');
+  
+  // Cargar opciones predefinidas con precios
+  const opcionesPred = await window.api.obtenerOpcionesPredefinidas();
+  const mapaPrecios = {};
+  opcionesPred.forEach(op => {
+    mapaPrecios[op.nombre] = op.precio_adicional || 0;
+  });
+  
   modificadoresList.innerHTML = mods.map(mod => {
     if (mod.tipo === 'texto') {
       return `
         <div class="modificador-item">
-          <label>${mod.nombre}${mod.precio_adicional > 0 ? ` (+$${mod.precio_adicional.toFixed(2)})` : ''}:</label>
-          <input type="text" class="form-control modificador-input" data-mod-id="${mod.id}" data-precio="${mod.precio_adicional}" placeholder="Ej: Sin cebolla, extra salsa">
+          <label>${mod.nombre}:</label>
+          <input type="text" class="form-control modificador-input" data-mod-id="${mod.id}" data-precio="0" placeholder="Ej: Sin cebolla, extra salsa">
         </div>
       `;
     } else if (mod.tipo === 'opciones') {
       const opciones = mod.opciones || [];
       return `
         <div class="modificador-item">
-          <label>${mod.nombre}${mod.precio_adicional > 0 ? ` (+$${mod.precio_adicional.toFixed(2)})` : ''}:</label>
-          <select class="form-control modificador-select" data-mod-id="${mod.id}" data-precio="${mod.precio_adicional}">
-            <option value="">-- Ninguno --</option>
-            ${opciones.map(op => `<option value="${op}">${op}</option>`).join('')}
+          <label>${mod.nombre}:</label>
+          <select class="form-control modificador-select" data-mod-id="${mod.id}">
+            <option value="" data-precio="0">-- Ninguno --</option>
+            ${opciones.map(op => {
+              const precio = mapaPrecios[op] || 0;
+              return `<option value="${op}" data-precio="${precio}">${op}${precio > 0 ? ` (+$${precio.toFixed(2)})` : ''}</option>`;
+            }).join('')}
           </select>
         </div>
       `;
@@ -282,19 +298,22 @@ function renderizarModificadores(mods) {
       if (opciones.length > 0) {
         return `
           <div class="modificador-item" style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;">${mod.nombre}${mod.precio_adicional > 0 ? ` (+$${mod.precio_adicional.toFixed(2)} c/u)` : ''}:</label>
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">${mod.nombre}:</label>
             <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 10px;">
-              ${opciones.map(op => `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" class="modificador-checkbox-multiple" 
-                    data-mod-id="${mod.id}" 
-                    data-opcion="${op}"
-                    data-precio="${mod.precio_adicional}" 
-                    id="mod-${mod.id}-${op.replace(/\s+/g, '-')}" 
-                    style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
-                  <label for="mod-${mod.id}-${op.replace(/\s+/g, '-')}" style="margin: 0; cursor: pointer; font-size: 14px;">${op}</label>
-                </div>
-              `).join('')}
+              ${opciones.map(op => {
+                const precio = mapaPrecios[op] || 0;
+                return `
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" class="modificador-checkbox-multiple" 
+                      data-mod-id="${mod.id}" 
+                      data-opcion="${op}"
+                      data-precio="${precio}" 
+                      id="mod-${mod.id}-${op.replace(/\s+/g, '-')}" 
+                      style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                    <label for="mod-${mod.id}-${op.replace(/\s+/g, '-')}" style="margin: 0; cursor: pointer; font-size: 14px;">${op}${precio > 0 ? ` (+$${precio.toFixed(2)})` : ''}</label>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
         `;
@@ -302,8 +321,8 @@ function renderizarModificadores(mods) {
         // Checkbox simple sin opciones
         return `
           <div class="modificador-item" style="display: flex; align-items: center; gap: 10px;">
-            <input type="checkbox" class="modificador-checkbox" data-mod-id="${mod.id}" data-precio="${mod.precio_adicional}" id="mod-${mod.id}" style="width: auto; margin: 0;">
-            <label for="mod-${mod.id}" style="margin: 0; cursor: pointer;">${mod.nombre}${mod.precio_adicional > 0 ? ` (+$${mod.precio_adicional.toFixed(2)})` : ''}</label>
+            <input type="checkbox" class="modificador-checkbox" data-mod-id="${mod.id}" data-precio="0" id="mod-${mod.id}" style="width: auto; margin: 0;">
+            <label for="mod-${mod.id}" style="margin: 0; cursor: pointer;">${mod.nombre}</label>
           </div>
         `;
       }
@@ -322,12 +341,28 @@ function capturarModificadores() {
   modificadoresSeleccionados = {};
   
   // Capturar inputs de texto
-  document.querySelectorAll('.modificador-input, .modificador-select').forEach(el => {
+  document.querySelectorAll('.modificador-input').forEach(el => {
     const modId = el.dataset.modId;
     const valor = el.value.trim();
-    const precio = parseFloat(el.dataset.precio) || 0;
     
     if (valor) {
+      const mod = modificadores.find(m => m.id == modId);
+      modificadoresSeleccionados[modId] = {
+        nombre: mod.nombre,
+        valor: valor,
+        precio: 0
+      };
+    }
+  });
+
+  // Capturar selects (tomar precio de la opción seleccionada)
+  document.querySelectorAll('.modificador-select').forEach(el => {
+    const modId = el.dataset.modId;
+    const valor = el.value.trim();
+    
+    if (valor) {
+      const selectedOption = el.options[el.selectedIndex];
+      const precio = parseFloat(selectedOption.dataset.precio) || 0;
       const mod = modificadores.find(m => m.id == modId);
       modificadoresSeleccionados[modId] = {
         nombre: mod.nombre,
@@ -508,9 +543,7 @@ function configurarEventos() {
 
   btnCerrarModal.addEventListener('click', () => {
     modal.style.display = 'none';
-    requestAnimationFrame(() => {
-      setTimeout(() => productoBuscar.focus(), 100);
-    });
+    devolverFocoABusqueda();
   });
 
   // Modal de configuración
@@ -520,9 +553,7 @@ function configurarEventos() {
 
   btnCerrarModalConfig.addEventListener('click', () => {
     modalConfig.style.display = 'none';
-    requestAnimationFrame(() => {
-      setTimeout(() => productoBuscar.focus(), 100);
-    });
+    devolverFocoABusqueda();
   });
 
   btnSeleccionarLogo.addEventListener('click', () => {
@@ -540,9 +571,7 @@ function configurarEventos() {
   btnGuardarConfig.addEventListener('click', guardarConfiguracion);
   btnCancelarConfig.addEventListener('click', () => {
     modalConfig.style.display = 'none';
-    requestAnimationFrame(() => {
-      setTimeout(() => productoBuscar.focus(), 100);
-    });
+    devolverFocoABusqueda();
   });
 
   // Modal de modificadores
@@ -553,9 +582,7 @@ function configurarEventos() {
 
   btnCerrarModalModificadores.addEventListener('click', () => {
     modalModificadores.style.display = 'none';
-    requestAnimationFrame(() => {
-      setTimeout(() => productoBuscar.focus(), 100);
-    });
+    devolverFocoABusqueda();
   });
 
   modificadorTipo.addEventListener('change', async () => {
@@ -565,14 +592,14 @@ function configurarEventos() {
     if (mostrar) {
       await cargarOpcionesPredefinidas();
     }
+    // Siempre devolver foco al input de nombre después de cargar opciones
+    setTimeout(() => modificadorNombre.focus(), 100);
   });
 
   btnGuardarModificador.addEventListener('click', guardarModificador);
   btnCancelarMod.addEventListener('click', () => {
     limpiarFormularioModificador();
-    requestAnimationFrame(() => {
-      setTimeout(() => productoBuscar.focus(), 100);
-    });
+    devolverFocoABusqueda();
   });
 
   // Agregar nueva opción predefinida
@@ -583,6 +610,19 @@ function configurarEventos() {
     if (e.key === 'Enter') {
       e.preventDefault();
       agregarNuevaOpcion();
+    }
+  });
+
+  // Manejar tecla ESC global
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      // Cerrar dropdown de búsqueda primero
+      if (resultadosBusqueda && resultadosBusqueda.style.display === 'block') {
+        resultadosBusqueda.style.display = 'none';
+        e.preventDefault();
+        productoBuscar.focus();
+        return;
+      }
     }
   });
 
@@ -1022,11 +1062,7 @@ async function guardarConfiguracion() {
 
     modalConfig.style.display = 'none';
     alert('✅ Configuración guardada correctamente');
-    
-    // Devolver foco a la ventana principal
-    setTimeout(() => {
-      productoBuscar.focus();
-    }, 100);
+    devolverFocoABusqueda();
   } catch (error) {
     console.error('Error al guardar configuración:', error);
     alert('Error al guardar la configuración');
@@ -1076,7 +1112,6 @@ function actualizarTablaModificadores() {
 async function guardarModificador() {
   const nombre = modificadorNombre.value.trim();
   const tipo = modificadorTipo.value;
-  const precio = parseFloat(modificadorPrecio.value) || 0;
   let opciones = null;
 
   if (!nombre) {
@@ -1101,8 +1136,7 @@ async function guardarModificador() {
         id: modificadorEditando.id,
         nombre,
         tipo,
-        opciones,
-        precioAdicional: precio
+        opciones
       });
       alert('✅ Modificador actualizado correctamente');
     } else {
@@ -1110,22 +1144,15 @@ async function guardarModificador() {
       await window.api.crearModificador({
         nombre,
         tipo,
-        opciones,
-        precioAdicional: precio
+        opciones
       });
       alert('✅ Modificador creado correctamente');
     }
 
     await cargarModificadores();
-    modalModificadores.style.display = 'none';
     limpiarFormularioModificador();
-    
-    // Devolver foco a búsqueda de productos
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        productoBuscar.focus();
-      }, 150);
-    });
+    modalModificadores.style.display = 'none';
+    devolverFocoABusqueda();
   } catch (error) {
     console.error('Error al guardar modificador:', error);
     alert('Error al guardar el modificador');
@@ -1140,7 +1167,6 @@ async function editarModificador(id) {
   modificadorEditando = mod;
   modificadorNombre.value = mod.nombre;
   modificadorTipo.value = mod.tipo;
-  modificadorPrecio.value = mod.precio_adicional || 0;
   
   if (mod.tipo === 'opciones' && mod.opciones) {
     opcionesSeleccionadas = [...mod.opciones];
@@ -1181,7 +1207,7 @@ function limpiarFormularioModificador() {
   modificadorNombre.value = '';
   modificadorTipo.value = 'texto';
   document.getElementById('nueva-opcion-input').value = '';
-  modificadorPrecio.value = '0';
+  document.getElementById('nueva-opcion-precio').value = '0';
   opcionesGroup.style.display = 'none';
   document.getElementById('form-title-mod').textContent = 'Agregar Nuevo Modificador';
   btnGuardarModificador.textContent = 'Guardar Modificador';
@@ -1208,8 +1234,9 @@ function mostrarOpcionesPredefinidas() {
 
   container.innerHTML = opcionesPredefinidas.map(op => {
     const seleccionada = opcionesSeleccionadas.includes(op.nombre);
+    const precio = op.precio_adicional || 0;
     return `
-      <div class="opcion-item" style="display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+      <div class="opcion-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
         <input type="checkbox" 
           class="opcion-checkbox"
           id="opt-${op.id}" 
@@ -1217,6 +1244,14 @@ function mostrarOpcionesPredefinidas() {
           ${seleccionada ? 'checked' : ''}
           style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
         <label for="opt-${op.id}" style="flex: 1; margin: 0; cursor: pointer; font-size: 14px; color: #333;">${op.nombre}</label>
+        <span style="font-size: 13px; color: #666; margin-right: 5px;">$</span>
+        <input type="number" 
+          class="precio-opcion-input" 
+          data-id="${op.id}" 
+          value="${precio}" 
+          step="0.01" 
+          min="0" 
+          style="width: 70px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; text-align: right;">
         <button type="button" class="btn-eliminar-opcion" data-id="${op.id}" data-nombre="${op.nombre}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px;">🗑️</button>
       </div>
     `;
@@ -1237,6 +1272,22 @@ function mostrarOpcionesPredefinidas() {
         }
       }
       console.log('Opciones seleccionadas:', opcionesSeleccionadas);
+    });
+  });
+
+  // Agregar eventos a inputs de precio
+  document.querySelectorAll('.precio-opcion-input').forEach(input => {
+    input.addEventListener('change', async function() {
+      const id = parseInt(this.dataset.id);
+      const precio = parseFloat(this.value) || 0;
+      try {
+        await window.api.actualizarPrecioOpcion(id, precio);
+        await cargarOpcionesPredefinidas();
+        console.log('✅ Precio actualizado');
+      } catch (error) {
+        alert('Error al actualizar el precio');
+        console.error('Error:', error);
+      }
     });
   });
 
@@ -1266,17 +1317,19 @@ function mostrarOpcionesPredefinidas() {
 
 // Agregar nueva opción predefinida
 async function agregarNuevaOpcion() {
-  const input = document.getElementById('nueva-opcion-input');
-  const nombre = input.value.trim();
+  const inputNombre = document.getElementById('nueva-opcion-input');
+  const inputPrecio = document.getElementById('nueva-opcion-precio');
+  const nombre = inputNombre.value.trim();
+  const precio = parseFloat(inputPrecio.value) || 0;
   
   if (!nombre) {
     alert('⚠️ Por favor ingrese el nombre de la opción');
-    input.focus();
+    inputNombre.focus();
     return;
   }
 
   try {
-    await window.api.crearOpcionPredefinida(nombre);
+    await window.api.crearOpcionPredefinida(nombre, precio);
     await cargarOpcionesPredefinidas();
     
     // Auto-seleccionar la opción recién creada
@@ -1285,10 +1338,11 @@ async function agregarNuevaOpcion() {
     }
     
     mostrarOpcionesPredefinidas();
-    input.value = '';
-    input.focus();
+    inputNombre.value = '';
+    inputPrecio.value = '0';
+    inputNombre.focus();
     
-    console.log('✅ Opción creada:', nombre);
+    console.log('✅ Opción creada:', nombre, 'Precio:', precio);
   } catch (error) {
     if (error.message && error.message.includes('UNIQUE')) {
       alert('⚠️ Esta opción ya existe');
@@ -1309,9 +1363,7 @@ function configurarDetectorCodigoBarras() {
   btnCerrarModalBarcode.addEventListener('click', () => {
     modalCodigoBarras.style.display = 'none';
     productoEscaneado = null;
-    requestAnimationFrame(() => {
-      setTimeout(() => productoBuscar.focus(), 100);
-    });
+    devolverFocoABusqueda();
   });
 
   // Detector global de escaneo rápido
@@ -1408,6 +1460,8 @@ window.agregarProductoEscaneado = function() {
       cantidadInput.focus();
       cantidadInput.select();
     }, 100);
+  } else {
+    devolverFocoABusqueda();
   }
 };
 
@@ -1418,6 +1472,7 @@ window.editarProductoEscaneado = function() {
   modalCodigoBarras.style.display = 'none';
   modal.style.display = 'flex';
   editarProducto(productoEscaneado.id);
+  // No llamar devolverFocoABusqueda aquí porque se abre otro modal
 };
 
 // Eliminar producto escaneado
@@ -1505,30 +1560,20 @@ async function guardarModificadoresProducto() {
   alert(`✅ Modificadores actualizados para el producto`);
   modalProductoModificadores.style.display = 'none';
   productoIdParaModificadores = null;
-  
-  // Devolver foco a búsqueda de productos
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      productoBuscar.focus();
-    }, 150);
-  });
+  devolverFocoABusqueda();
 }
 
 // Configurar eventos del modal de modificadores por producto
 btnCerrarModalProductoMods.addEventListener('click', () => {
   modalProductoModificadores.style.display = 'none';
   productoIdParaModificadores = null;
-  requestAnimationFrame(() => {
-    setTimeout(() => productoBuscar.focus(), 100);
-  });
+  devolverFocoABusqueda();
 });
 
 btnCancelarProductoMods.addEventListener('click', () => {
   modalProductoModificadores.style.display = 'none';
   productoIdParaModificadores = null;
-  requestAnimationFrame(() => {
-    setTimeout(() => productoBuscar.focus(), 100);
-  });
+  devolverFocoABusqueda();
 });
 
 btnGuardarProductoMods.addEventListener('click', guardarModificadoresProducto);

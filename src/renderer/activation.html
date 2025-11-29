@@ -221,8 +221,8 @@
       if (result.success) {
         showMessage('¡Sistema activado correctamente!', 'success');
         setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+          window.close();
+        }, 1500);
       } else {
         showMessage(result.message || 'Código de activación inválido', 'error');
         btnActivate.disabled = false;

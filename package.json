@@ -3,13 +3,44 @@
   "version": "1.0.0",
   "description": "Sistema de ventas con Electron",
   "main": "src/main/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lautaroemurua/MMVentas.git"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "publish": "electron-builder --win --publish always",
     "test-license": "node test-license.js",
     "force-expire": "node force-expire.js",
     "reset-license": "node reset-license.js",
     "demo-modificadores": "electron demo-modificadores.js"
+  },
+  "build": {
+    "appId": "com.mmventas.app",
+    "productName": "MMVentas",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "publish": [
+        "github"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Lautaroemurua",
+      "repo": "MMVentas"
+    }
   },
   "keywords": [
     "electron",
@@ -20,9 +51,12 @@
   "license": "ISC",
   "devDependencies": {
     "electron": "^28.0.0",
+    "electron-builder": "^26.0.12",
     "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
-    "better-sqlite3": "^9.2.0"
+    "better-sqlite3": "^9.2.0",
+    "dotenv": "^17.2.3",
+    "electron-updater": "^6.6.2"
   }
 }
