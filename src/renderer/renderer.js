@@ -135,6 +135,8 @@ async function actualizarInfoTrial() {
   if (trialInfo.active) {
     trialElement.style.display = 'block';
     
+    const tipoLicencia = trialInfo.isPremium ? 'Premium' : 'Período de prueba';
+    
     // Si quedan menos de 24h, mostrar advertencia en rojo con cuenta regresiva detallada
     if (trialInfo.warning) {
       const horasText = trialInfo.hours > 0 ? `${trialInfo.hours}h ` : '';
@@ -144,21 +146,30 @@ async function actualizarInfoTrial() {
       trialElement.style.fontWeight = 'bold';
       trialElement.style.padding = '12px 20px';
       trialElement.style.animation = 'pulse 2s infinite';
-      trialElement.innerHTML = `⚠️ <strong>¡ADVERTENCIA!</strong> Licencia expira en: ${horasText}${minutosText}`;
+      trialElement.innerHTML = `⚠️ <strong>¡ADVERTENCIA!</strong> ${tipoLicencia} expira en: ${horasText}${minutosText}`;
     } else {
-      // Mostrar info normal con días restantes
+      // Mostrar info normal con días/horas restantes
       const diasText = trialInfo.days > 0 ? `${trialInfo.days} día${trialInfo.days !== 1 ? 's' : ''}` : '';
       const horasText = trialInfo.hours > 0 ? `${trialInfo.hours}h` : '';
-      trialElement.style.background = '#f0f8ff';
-      trialElement.style.color = '#333';
+      
+      if (trialInfo.isPremium) {
+        // Premium: mostrar en verde
+        trialElement.style.background = '#28a745';
+        trialElement.style.color = 'white';
+      } else {
+        // Trial: mostrar en azul
+        trialElement.style.background = '#f0f8ff';
+        trialElement.style.color = '#333';
+      }
+      
       trialElement.style.fontWeight = 'normal';
       trialElement.style.padding = '8px 15px';
       trialElement.style.animation = 'none';
       
       if (trialInfo.days > 0) {
-        trialElement.innerHTML = `⏱️ <strong>Período de prueba:</strong> ${diasText} ${horasText} restantes`;
+        trialElement.innerHTML = `${trialInfo.isPremium ? '✅' : '⏱️'} <strong>${tipoLicencia}:</strong> ${diasText} ${horasText} restantes`;
       } else {
-        trialElement.innerHTML = `⏱️ <strong>Período de prueba:</strong> ${horasText} ${trialInfo.minutes}min restantes`;
+        trialElement.innerHTML = `${trialInfo.isPremium ? '✅' : '⏱️'} <strong>${tipoLicencia}:</strong> ${horasText} ${trialInfo.minutes}min restantes`;
       }
     }
   } else {

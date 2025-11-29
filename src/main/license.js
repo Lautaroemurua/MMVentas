@@ -4,7 +4,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const LICENSE_FILE = path.join(app.getPath('userData'), '.sys');
-const TRIAL_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 días
+const TRIAL_DURATION = 48 * 60 * 60 * 1000; // 48 horas (trial gratuito)
+const PREMIUM_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 días (premium con licencia)
 const WARNING_THRESHOLD = 24 * 60 * 60 * 1000; // Avisar 24h antes
 
 // Obtener identificador único del sistema
@@ -114,13 +115,32 @@ function checkLicense() {
     };
   }
 
-  // Sistema activado
+  // Sistema activado (Premium)
   if (state.activated && state.licenseKey) {
-    return {
-      valid: true,
-      trial: false,
-      activated: true
-    };
+    const activationDate = state.activationDate || now;
+    const elapsed = now - activationDate;
+    const remaining = PREMIUM_DURATION - elapsed;
+    
+    if (remaining > 0) {
+      return {
+        valid: true,
+        trial: false,
+        activated: true,
+        premium: true,
+        remaining: remaining,
+        warning: remaining <= WARNING_THRESHOLD
+      };
+    } else {
+      // Premium expirado
+      return {
+        valid: false,
+        trial: false,
+        activated: true,
+        premium: true,
+        expired: true,
+        systemId: systemId
+      };
+    }
   }
 
   // Trial activo
@@ -162,6 +182,7 @@ async function activateLicense(licenseKey) {
     if (isValid) {
       state.activated = true;
       state.licenseKey = licenseKey;
+      state.activationDate = Date.now();
       state.activationDate = Date.now();
       saveLicenseState(state);
       return { success: true, message: 'Sistema activado correctamente' };
@@ -350,12 +371,14 @@ async function notifyExpiration(systemId) {
 
 function getTrialInfo() {
   const status = checkLicense();
-  if (status.trial && status.remaining) {
+  if ((status.trial || status.premium) && status.remaining) {
     const days = Math.floor(status.remaining / (24 * 60 * 60 * 1000));
     const hours = Math.floor((status.remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
     const minutes = Math.floor((status.remaining % (60 * 60 * 1000)) / (60 * 1000));
     return {
       active: true,
+      isPremium: status.premium || false,
+      isTrial: status.trial || false,
       days,
       hours,
       minutes,
