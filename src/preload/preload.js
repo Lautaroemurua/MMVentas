@@ -41,5 +41,4 @@ contextBridge.exposeInMainWorld('api', {
   // Producto-Modificadores
   obtenerModificadoresProducto: (productoId) => ipcRenderer.invoke('obtener-modificadores-producto', productoId),
   guardarModificadoresProducto: (data) => ipcRenderer.invoke('guardar-modificadores-producto', data)
-  lkea
 });
