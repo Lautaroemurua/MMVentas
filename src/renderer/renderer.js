@@ -950,12 +950,6 @@ async function guardarProducto() {
     }
 
     limpiarFormularioProducto();
-    // Devolver foco a búsqueda de productos
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        productoBuscar.focus();
-      }, 150);
-    });
   } catch (error) {
     console.error('Error al guardar producto:', error);
     alert('❌ Error al guardar el producto');
@@ -985,12 +979,6 @@ async function eliminarProducto(id) {
       await window.api.eliminarProducto(id);
       await cargarProductos();
       alert('Producto eliminado correctamente');
-      // Devolver foco al modal
-      setTimeout(() => {
-        if (modal.style.display === 'flex') {
-          productoNombre.focus();
-        }
-      }, 100);
     } catch (error) {
       console.error('Error al eliminar producto:', error);
       alert('Error al eliminar el producto');
@@ -1097,7 +1085,6 @@ async function guardarConfiguracion() {
 
     modalConfig.style.display = 'none';
     alert('✅ Configuración guardada correctamente');
-    devolverFocoABusqueda();
   } catch (error) {
     console.error('Error al guardar configuración:', error);
     alert('Error al guardar la configuración');
@@ -1187,7 +1174,6 @@ async function guardarModificador() {
     await cargarModificadores();
     limpiarFormularioModificador();
     modalModificadores.style.display = 'none';
-    devolverFocoABusqueda();
   } catch (error) {
     console.error('Error al guardar modificador:', error);
     alert('Error al guardar el modificador');
