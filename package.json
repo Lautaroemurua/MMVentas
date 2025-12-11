@@ -1,6 +1,6 @@
 {
   "name": "mmventas",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Sistema de ventas con Electron",
   "main": "src/main/main.js",
   "repository": {

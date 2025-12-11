@@ -216,7 +216,6 @@ function createWindow() {
 
 // Configurar auto-updater
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
 
 autoUpdater.on('update-available', (info) => {
   dialog.showMessageBox(mainWindow, {
@@ -242,12 +241,13 @@ autoUpdater.on('update-downloaded', () => {
   dialog.showMessageBox(mainWindow, {
     type: 'info',
     title: 'Actualización lista',
-    message: 'La actualización se instalará al cerrar la aplicación',
-    buttons: ['Reiniciar ahora', 'Más tarde']
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
+    message: 'La actualización se instalará ahora. La aplicación se reiniciará automáticamente.',
+    buttons: ['Instalar y reiniciar']
+  }).then(() => {
+    // Forzar instalación inmediata con NSIS
+    setImmediate(() => {
+      autoUpdater.quitAndInstall(true, true);
+    });
   });
 });
 

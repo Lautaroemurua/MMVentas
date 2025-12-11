@@ -91,6 +91,32 @@ let barcodeScanBuffer = '';
 let barcodeScanTimeout = null;
 let productoEscaneado = null;
 
+// Toast notifications
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
+  
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-message">${message}</span>
+  `;
+  
+  container.appendChild(toast);
+  
+  // Auto-remover después de 3 segundos
+  setTimeout(() => {
+    toast.style.animation = 'slideOutRight 0.3s ease-in';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }, 3000);
+}
+
 // Inicializar aplicación
 async function init() {
   await cargarProductos();
@@ -261,11 +287,6 @@ async function seleccionarProducto(id) {
   
   btnAgregar.disabled = false;
   cantidadInput.focus();
-}
-
-// Helper para devolver foco al input de búsqueda
-function devolverFocoABusqueda() {
-  setTimeout(() => productoBuscar.focus(), 50);
 }
 
 // Mostrar modificadores de un producto específico
@@ -573,12 +594,12 @@ function configurarEventos() {
   btnGestionarProductos.addEventListener('click', () => {
     modal.style.display = 'flex';
     limpiarFormularioProducto();
-    setTimeout(() => productoNombre.focus(), 100);
+    productoNombre.focus();
   });
 
   btnCerrarModal.addEventListener('click', () => {
     modal.style.display = 'none';
-    devolverFocoABusqueda();
+    productoBuscar.focus();
   });
 
   // Modal de configuración
@@ -588,7 +609,7 @@ function configurarEventos() {
 
   btnCerrarModalConfig.addEventListener('click', () => {
     modalConfig.style.display = 'none';
-    devolverFocoABusqueda();
+    productoBuscar.focus();
   });
 
   btnSeleccionarLogo.addEventListener('click', () => {
@@ -606,18 +627,19 @@ function configurarEventos() {
   btnGuardarConfig.addEventListener('click', guardarConfiguracion);
   btnCancelarConfig.addEventListener('click', () => {
     modalConfig.style.display = 'none';
-    devolverFocoABusqueda();
+    productoBuscar.focus();
   });
 
   // Modal de modificadores
   btnModificadores.addEventListener('click', () => {
     modalModificadores.style.display = 'flex';
     limpiarFormularioModificador();
+    modificadorNombre.focus();
   });
 
   btnCerrarModalModificadores.addEventListener('click', () => {
     modalModificadores.style.display = 'none';
-    devolverFocoABusqueda();
+    productoBuscar.focus();
   });
 
   modificadorTipo.addEventListener('change', async () => {
@@ -627,14 +649,12 @@ function configurarEventos() {
     if (mostrar) {
       await cargarOpcionesPredefinidas();
     }
-    // Siempre devolver foco al input de nombre después de cargar opciones
-    setTimeout(() => modificadorNombre.focus(), 100);
   });
 
   btnGuardarModificador.addEventListener('click', guardarModificador);
   btnCancelarMod.addEventListener('click', () => {
     limpiarFormularioModificador();
-    devolverFocoABusqueda();
+    productoBuscar.focus();
   });
 
   // Agregar nueva opción predefinida
@@ -661,26 +681,41 @@ function configurarEventos() {
     }
   });
 
-  // Cerrar modales al hacer clic fuera
-  const handleModalClick = (e) => {
+  // Cerrar modales al hacer clic en el fondo (NO interceptar otros clicks)
+  modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.style.display = 'none';
+      productoBuscar.focus();
     }
+  });
+  
+  modalConfig.addEventListener('click', (e) => {
     if (e.target === modalConfig) {
       modalConfig.style.display = 'none';
+      productoBuscar.focus();
     }
+  });
+  
+  modalModificadores.addEventListener('click', (e) => {
     if (e.target === modalModificadores) {
       modalModificadores.style.display = 'none';
+      productoBuscar.focus();
     }
+  });
+  
+  modalCodigoBarras.addEventListener('click', (e) => {
     if (e.target === modalCodigoBarras) {
       modalCodigoBarras.style.display = 'none';
+      productoBuscar.focus();
     }
+  });
+  
+  modalProductoModificadores.addEventListener('click', (e) => {
     if (e.target === modalProductoModificadores) {
       modalProductoModificadores.style.display = 'none';
+      productoBuscar.focus();
     }
-  };
-  
-  window.addEventListener('click', handleModalClick);
+  });
 
   // Cerrar modales con ESC
   window.addEventListener('keydown', (e) => {
@@ -698,9 +733,7 @@ function configurarEventos() {
       modalProductoModificadores.style.display = 'none';
       
       if (anyModalOpen) {
-        requestAnimationFrame(() => {
-          setTimeout(() => productoBuscar.focus(), 100);
-        });
+        // Modales cerrados
       }
     }
   });
@@ -721,13 +754,13 @@ function configurarEventos() {
 // Agregar item al ticket
 function agregarItemAlTicket() {
   if (!productoSeleccionado) {
-    alert('Por favor seleccione un producto');
+    showToast('Por favor seleccione un producto', 'warning');
     return;
   }
 
   const cantidad = parseInt(cantidadInput.value);
   if (cantidad <= 0) {
-    alert('La cantidad debe ser mayor a 0');
+    showToast('La cantidad debe ser mayor a 0', 'warning');
     return;
   }
 
@@ -858,7 +891,7 @@ async function finalizarVenta() {
     });
 
     // Mostrar confirmación y manejar el foco correctamente
-    alert(`✅ Venta #${venta.id} finalizada\n\nTotal: $${venta.total.toFixed(2)}`);
+    showToast(`Venta #${venta.id} finalizada - Total: $${venta.total.toFixed(2)}`, 'success');
 
     // Usar requestAnimationFrame y setTimeout para asegurar el foco
     requestAnimationFrame(() => {
@@ -870,7 +903,7 @@ async function finalizarVenta() {
     });
   } catch (error) {
     console.error('Error al finalizar venta:', error);
-    alert('❌ Error al procesar la venta');
+    showToast('Error al procesar la venta', 'error');
   }
 }
 
@@ -920,14 +953,12 @@ async function guardarProducto() {
   const codigoBarras = productoCodigoBarras.value.trim();
 
   if (!nombre) {
-    alert('Por favor ingrese el nombre del producto');
-    productoNombre.focus();
+    showToast('Por favor ingrese el nombre del producto', 'warning');
     return;
   }
 
   if (isNaN(precio) || precio <= 0) {
-    alert('Por favor ingrese un precio válido');
-    productoPrecio.focus();
+    showToast('Por favor ingrese un precio válido', 'warning');
     return;
   }
 
@@ -941,18 +972,20 @@ async function guardarProducto() {
         codigoBarras
       });
       await cargarProductos();
-      alert('✅ Producto actualizado correctamente');
+      showToast('Producto actualizado correctamente', 'success');
+      setTimeout(() => productoNombre.focus(), 10);
     } else {
       // Crear
       await window.api.crearProducto({ nombre, precio, codigoBarras });
       await cargarProductos();
-      alert('✅ Producto creado correctamente');
+      showToast('Producto creado correctamente', 'success');
+      setTimeout(() => productoNombre.focus(), 10);
     }
 
     limpiarFormularioProducto();
   } catch (error) {
     console.error('Error al guardar producto:', error);
-    alert('❌ Error al guardar el producto');
+    showToast('Error al guardar el producto', 'error');
   }
 }
 
@@ -978,10 +1011,10 @@ async function eliminarProducto(id) {
     try {
       await window.api.eliminarProducto(id);
       await cargarProductos();
-      alert('Producto eliminado correctamente');
+      showToast('Producto eliminado correctamente', 'success');
     } catch (error) {
       console.error('Error al eliminar producto:', error);
-      alert('Error al eliminar el producto');
+      showToast('Error al eliminar el producto', 'error');
     }
   }
 }
@@ -1012,7 +1045,7 @@ function abrirModalConfiguracion() {
   }
   
   modalConfig.style.display = 'flex';
-  setTimeout(() => nombreNegocioInput.focus(), 100);
+  nombreNegocioInput.focus();
 }
 
 // Cargar logo desde archivo
@@ -1020,14 +1053,14 @@ function cargarLogo(file) {
   if (!file) return;
   
   if (!file.type.startsWith('image/')) {
-    alert('Por favor seleccione un archivo de imagen válido');
+    showToast('Por favor seleccione un archivo de imagen válido', 'warning');
     logoInput.value = ''; // Limpiar input
     return;
   }
 
   // Límite de 500KB
   if (file.size > 500 * 1024) {
-    alert('La imagen es muy grande. Por favor use una imagen menor a 500KB');
+    showToast('La imagen es muy grande. Por favor use una imagen menor a 500KB', 'warning');
     logoInput.value = ''; // Limpiar input
     return;
   }
@@ -1039,7 +1072,7 @@ function cargarLogo(file) {
     btnEliminarLogo.style.display = 'inline-block';
   };
   reader.onerror = () => {
-    alert('Error al cargar la imagen');
+    showToast('Error al cargar la imagen', 'error');
     logoInput.value = '';
   };
   reader.readAsDataURL(file);
@@ -1059,14 +1092,12 @@ async function guardarConfiguracion() {
   const piePagina = piePaginaInput.value.trim();
 
   if (!nombreNegocio) {
-    alert('Por favor ingrese el nombre del negocio');
-    nombreNegocioInput.focus();
+    showToast('Por favor ingrese el nombre del negocio', 'warning');
     return;
   }
 
   if (!piePagina) {
-    alert('Por favor ingrese el pie de página');
-    piePaginaInput.focus();
+    showToast('Por favor ingrese el pie de página', 'warning');
     return;
   }
 
@@ -1084,10 +1115,11 @@ async function guardarConfiguracion() {
     };
 
     modalConfig.style.display = 'none';
-    alert('✅ Configuración guardada correctamente');
+    showToast('Configuración guardada correctamente', 'success');
+    setTimeout(() => productoBuscar.focus(), 10);
   } catch (error) {
     console.error('Error al guardar configuración:', error);
-    alert('Error al guardar la configuración');
+    showToast('Error al guardar la configuración', 'error');
   }
 }
 
@@ -1137,14 +1169,13 @@ async function guardarModificador() {
   let opciones = null;
 
   if (!nombre) {
-    alert('Por favor ingrese el nombre del modificador');
-    modificadorNombre.focus();
+    showToast('Por favor ingrese el nombre del modificador', 'warning');
     return;
   }
 
   if (tipo === 'opciones' || tipo === 'checkbox') {
     if (opcionesSeleccionadas.length === 0 && tipo === 'opciones') {
-      alert('Por favor seleccione al menos una opción');
+      showToast('Por favor seleccione al menos una opción', 'warning');
       return;
     }
     // Para checkbox, las opciones son opcionales (puede ser simple sí/no)
@@ -1160,7 +1191,7 @@ async function guardarModificador() {
         tipo,
         opciones
       });
-      alert('✅ Modificador actualizado correctamente');
+      showToast('Modificador actualizado correctamente', 'success');
     } else {
       // Crear nuevo modificador
       await window.api.crearModificador({
@@ -1168,15 +1199,16 @@ async function guardarModificador() {
         tipo,
         opciones
       });
-      alert('✅ Modificador creado correctamente');
+      showToast('Modificador creado correctamente', 'success');
     }
 
     await cargarModificadores();
     limpiarFormularioModificador();
     modalModificadores.style.display = 'none';
+    setTimeout(() => productoBuscar.focus(), 10);
   } catch (error) {
     console.error('Error al guardar modificador:', error);
-    alert('Error al guardar el modificador');
+    showToast('Error al guardar el modificador', 'error');
   }
 }
 
@@ -1200,11 +1232,7 @@ async function editarModificador(id) {
 
   document.getElementById('form-title-mod').textContent = 'Editar Modificador';
   btnGuardarModificador.textContent = 'Actualizar Modificador';
-  
-  setTimeout(() => modificadorNombre.focus(), 100);
-}
-
-// Eliminar modificador
+}// Eliminar modificador
 async function eliminarModificador(id) {
   const mod = modificadores.find(m => m.id === id);
   if (!mod) return;
@@ -1213,10 +1241,10 @@ async function eliminarModificador(id) {
     try {
       await window.api.eliminarModificador(id);
       await cargarModificadores();
-      alert('Modificador eliminado correctamente');
+      showToast('Modificador eliminado correctamente', 'success');
     } catch (error) {
       console.error('Error al eliminar modificador:', error);
-      alert('Error al eliminar el modificador');
+      showToast('Error al eliminar el modificador', 'error');
     }
   }
 }
@@ -1306,7 +1334,7 @@ function mostrarOpcionesPredefinidas() {
         await cargarOpcionesPredefinidas();
         console.log('✅ Precio actualizado');
       } catch (error) {
-        alert('Error al actualizar el precio');
+        showToast('Error al actualizar el precio', 'error');
         console.error('Error:', error);
       }
     });
@@ -1326,7 +1354,7 @@ function mostrarOpcionesPredefinidas() {
             opcionesSeleccionadas.splice(index, 1);
           }
         } catch (error) {
-          alert('Error al eliminar la opción');
+          showToast('Error al eliminar la opción', 'error');
           console.error('Error:', error);
         }
       }
@@ -1344,8 +1372,7 @@ async function agregarNuevaOpcion() {
   const precio = parseFloat(inputPrecio.value) || 0;
   
   if (!nombre) {
-    alert('⚠️ Por favor ingrese el nombre de la opción');
-    inputNombre.focus();
+    showToast('Por favor ingrese el nombre de la opción', 'warning');
     return;
   }
 
@@ -1361,14 +1388,13 @@ async function agregarNuevaOpcion() {
     mostrarOpcionesPredefinidas();
     inputNombre.value = '';
     inputPrecio.value = '0';
-    inputNombre.focus();
     
     console.log('✅ Opción creada:', nombre, 'Precio:', precio);
   } catch (error) {
     if (error.message && error.message.includes('UNIQUE')) {
-      alert('⚠️ Esta opción ya existe');
+      showToast('Esta opción ya existe', 'warning');
     } else {
-      alert('❌ Error al crear la opción');
+      showToast('Error al crear la opción', 'error');
     }
     console.error('Error al crear opción:', error);
   }
@@ -1384,7 +1410,7 @@ function configurarDetectorCodigoBarras() {
   btnCerrarModalBarcode.addEventListener('click', () => {
     modalCodigoBarras.style.display = 'none';
     productoEscaneado = null;
-    devolverFocoABusqueda();
+    productoBuscar.focus();
   });
 
   // Detector global de escaneo rápido
@@ -1474,16 +1500,7 @@ window.agregarProductoEscaneado = function() {
   
   seleccionarProducto(productoEscaneado.id);
   modalCodigoBarras.style.display = 'none';
-  
-  // Ir directo a cantidad si no hay modificadores
-  if (modificadores.length === 0) {
-    setTimeout(() => {
-      cantidadInput.focus();
-      cantidadInput.select();
-    }, 100);
-  } else {
-    devolverFocoABusqueda();
-  }
+  productoBuscar.focus();
 };
 
 // Editar producto escaneado
@@ -1505,10 +1522,10 @@ window.eliminarProductoEscaneado = async function() {
       await window.api.eliminarProducto(productoEscaneado.id);
       await cargarProductos();
       modalCodigoBarras.style.display = 'none';
-      alert('✅ Producto eliminado correctamente');
+      showToast('Producto eliminado correctamente', 'success');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('❌ Error al eliminar el producto');
+      showToast('Error al eliminar el producto', 'error');
     }
   }
 };
@@ -1523,10 +1540,6 @@ window.crearProductoConCodigo = function() {
   
   // Pre-cargar el código de barras
   productoCodigoBarras.value = codigo;
-  
-  setTimeout(() => {
-    productoNombre.focus();
-  }, 100);
 };
 
 // Cerrar modal
@@ -1578,23 +1591,23 @@ async function guardarModificadoresProducto() {
     modificadorIds
   });
 
-  alert(`✅ Modificadores actualizados para el producto`);
+  showToast('Modificadores actualizados para el producto', 'success');
   modalProductoModificadores.style.display = 'none';
   productoIdParaModificadores = null;
-  devolverFocoABusqueda();
+  setTimeout(() => productoBuscar.focus(), 10);
 }
 
 // Configurar eventos del modal de modificadores por producto
 btnCerrarModalProductoMods.addEventListener('click', () => {
   modalProductoModificadores.style.display = 'none';
   productoIdParaModificadores = null;
-  devolverFocoABusqueda();
+  productoBuscar.focus();
 });
 
 btnCancelarProductoMods.addEventListener('click', () => {
   modalProductoModificadores.style.display = 'none';
   productoIdParaModificadores = null;
-  devolverFocoABusqueda();
+  productoBuscar.focus();
 });
 
 btnGuardarProductoMods.addEventListener('click', guardarModificadoresProducto);
