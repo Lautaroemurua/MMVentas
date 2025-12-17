@@ -594,6 +594,7 @@ function configurarEventos() {
   btnGestionarProductos.addEventListener('click', () => {
     modal.style.display = 'flex';
     limpiarFormularioProducto();
+    actualizarTablaProductos(); // Refrescar tabla al abrir modal
     productoNombre.focus();
   });
 

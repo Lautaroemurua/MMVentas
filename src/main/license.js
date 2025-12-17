@@ -251,25 +251,15 @@ function validateLicenseOffline(systemId, licenseKey) {
   return false;
 }
 
-// Validar licencia contra servidor online
+// Validar licencia contra servidor online (repositorio público)
 async function validateLicenseOnline(systemId, licenseKey) {
   return new Promise((resolve, reject) => {
     const https = require('https');
-    
-    // Leer token desde variable de entorno (configurada en el sistema)
-    // Para configurar: setx MMVENTAS_GITHUB_TOKEN "tu_token_aqui"
-    const token = process.env.MMVENTAS_GITHUB_TOKEN;
     
     const headers = {
       'User-Agent': 'MMVentas-System',
       'Cache-Control': 'no-cache'
     };
-    
-    // Si hay token, usar API de GitHub (para repo privado)
-    if (token) {
-      headers['Authorization'] = `token ${token}`;
-      headers['Accept'] = 'application/vnd.github.v3.raw';
-    }
     
     const options = {
       hostname: 'raw.githubusercontent.com',
@@ -289,7 +279,6 @@ async function validateLicenseOnline(systemId, licenseKey) {
       res.on('end', () => {
         try {
           console.log('[LICENSE] GitHub Response Status:', res.statusCode);
-          console.log('[LICENSE] Token present:', !!token);
           
           if (res.statusCode === 200) {
             const licenses = JSON.parse(data);

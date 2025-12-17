@@ -206,6 +206,9 @@ function createWindow() {
     }
   });
 
+  // Ocultar la barra de menú
+  mainWindow.setMenuBarVisibility(false);
+
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   // Abrir DevTools en modo desarrollo
