@@ -1613,5 +1613,55 @@ btnCancelarProductoMods.addEventListener('click', () => {
 
 btnGuardarProductoMods.addEventListener('click', guardarModificadoresProducto);
 
+// ============================================
+// MODAL ACERCA DE
+// ============================================
+
+// Obtener elementos del modal
+const modalAcercaDe = document.getElementById('modal-acerca-de');
+const btnAcercaDe = document.getElementById('btn-acerca-de');
+const btnCerrarAcerca = document.getElementById('btn-cerrar-modal-acerca');
+const linkWebsite = document.getElementById('link-website');
+const linkSupport = document.getElementById('link-support');
+
+// Abrir modal
+if (btnAcercaDe) {
+  btnAcercaDe.addEventListener('click', () => {
+    if (modalAcercaDe) modalAcercaDe.style.display = 'flex';
+  });
+}
+
+// Cerrar modal
+if (btnCerrarAcerca) {
+  btnCerrarAcerca.addEventListener('click', () => {
+    if (modalAcercaDe) modalAcercaDe.style.display = 'none';
+  });
+}
+
+// Cerrar al hacer clic fuera
+if (modalAcercaDe) {
+  modalAcercaDe.addEventListener('click', (e) => {
+    if (e.target === modalAcercaDe) {
+      modalAcercaDe.style.display = 'none';
+    }
+  });
+}
+
+// Abrir sitio web
+if (linkWebsite) {
+  linkWebsite.addEventListener('click', (e) => {
+    e.preventDefault();
+    require('electron').shell.openExternal('https://www.mmtech.com.ar');
+  });
+}
+
+// Abrir soporte (mailto)
+if (linkSupport) {
+  linkSupport.addEventListener('click', (e) => {
+    e.preventDefault();
+    require('electron').shell.openExternal('mailto:soporte@mmtech.com.ar?subject=Soporte MMVentas');
+  });
+}
+
 // Iniciar aplicación cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', init);

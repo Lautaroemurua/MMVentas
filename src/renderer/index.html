@@ -13,10 +13,10 @@
   <div class="container">
     <header>
       <div class="header-left">
-        <img src="assets/logo.jpg" alt="Logo" class="header-logo">
+        <img src="assets/logoMM.png" alt="Logo" class="header-logo">
         <div class="header-title">
           <h1>Sistema de Ventas</h1>
-          <p class="header-contact">📞 Contacto: +54 9 11 XXXX-XXXX | 📧 info@mmventas.com</p>
+          <p class="header-contact">📞 Contacto: +54 9 3544 54-6463 | 📧 contacto@mmventas.com.ar</p>
         </div>
       </div>
       <div class="header-right">
@@ -25,6 +25,7 @@
           <button id="btn-modificadores" class="btn-secondary">📝 Modificadores</button>
           <button id="btn-configuracion" class="btn-secondary">⚙️ Configuración</button>
           <button id="btn-gestionar-productos" class="btn-secondary">Gestionar Productos</button>
+          <button id="btn-acerca-de" class="btn-secondary">ⓘ Acerca de</button>
         </div>
       </div>
     </header>
@@ -359,6 +360,73 @@
         <div class="form-buttons" style="margin-top: 25px;">
           <button id="btn-cancelar-producto-mods" class="btn-secondary">Cancelar</button>
           <button id="btn-guardar-producto-mods" class="btn-primary">Guardar Modificadores</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Acerca de -->
+  <div id="modal-acerca-de" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header-about">
+        <button class="btn-close-about" id="btn-cerrar-modal-acerca">&times;</button>
+      </div>
+      
+      
+      <div class="modal-body-about">
+        <div class="about-hero">
+          <div class="about-logo-container">
+            <div class="about-logo-glow"></div>
+            <img src="assets/logoMM.png" alt="MMVentas Logo" class="about-logo">
+          </div>
+          <h1 class="about-title">
+            <span class="about-title-mm">MM</span><span class="about-title-ventas">Ventas</span>
+          </h1>
+          <div class="about-version-badge">
+            <span class="version-label">v</span>1.0.6
+          </div>
+        </div>
+
+        <div class="about-description-box">
+          <div class="about-icon">💼</div>
+          <h3 class="about-subtitle">Sistema de Punto de Venta</h3>
+          <p class="about-description">
+            Software profesional para la gestión integral de ventas, inventario y facturación.
+          </p>
+        </div>
+
+        <div class="about-credits-card">
+          <div class="credits-header">
+            <div class="credits-icon">👨‍💻</div>
+            <span>Desarrollado por</span>
+          </div>
+          <div class="credits-names">
+            <a href="https://www.linkedin.com/in/lautaro-murua-724359126/" style="text-decoration: none;"> <span class="credit-name">Murua Lautaro</span></a>
+            <span class="credit-separator">&</span>
+            <span class="credit-name">Morales Leandro</span>
+          </div>
+          <div class="credits-company">
+            <div class="company-badge">
+              <span class="company-icon">🏢</span>
+              <span class="company-name">MM Tech</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-footer">
+          <div class="about-links">
+            <a href="#" id="link-website" class="about-link-modern">
+              <span class="link-icon">🌐</span>
+              <span class="link-text">www.mmtech.com.ar</span>
+            </a>
+            <a href="#" id="link-support" class="about-link-modern">
+              <span class="link-icon">📧</span>
+              <span class="link-text">Soporte Técnico</span>
+            </a>
+          </div>
+          <p class="about-copyright">
+            © 2025 MM Tech. Todos los derechos reservados.
+          </p>
         </div>
       </div>
     </div>
