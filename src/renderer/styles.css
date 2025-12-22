@@ -10,6 +10,13 @@ body {
   color: #333;
   min-height: 100vh;
   padding: 20px;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
 }
 
 .container {
@@ -20,6 +27,13 @@ body {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   border: 1px solid rgba(226, 232, 240, 0.8);
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    border-radius: 10px;
+  }
 }
 
 /* Header */
@@ -106,15 +120,25 @@ main {
   grid-template-columns: 2fr 1fr;
   gap: 20px;
   padding: 20px;
-  height: calc(100vh - 120px);
-  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  main {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  main {
+    padding: 10px;
+    gap: 15px;
+  }
 }
 
 section {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
 }
 
 section h2 {
