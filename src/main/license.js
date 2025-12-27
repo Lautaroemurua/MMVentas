@@ -4,7 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const LICENSE_FILE = path.join(app.getPath('userData'), '.sys');
-const TRIAL_DURATION = 48 * 60 * 60 * 1000; // 48 horas (trial gratuito)
+const TRIAL_DURATION = 10 * 24 * 60 * 60 * 1000; // 10 días (trial gratuito)
 const PREMIUM_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 días (premium con licencia)
 const WARNING_THRESHOLD = 24 * 60 * 60 * 1000; // Avisar 24h antes
 

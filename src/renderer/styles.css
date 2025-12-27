@@ -4,12 +4,23 @@
   box-sizing: border-box;
 }
 
+/* Asegurar scroll en todas las resoluciones */
+html {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Ancho m\u00ednimo para evitar colapso en VGA */
+body, html {
+  min-width: 600px;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(180deg, #ffffff 0%, #f5f7fa 50%, #e8ecf1 100%);
   color: #333;
-  min-height: 100vh;
   padding: 20px;
+  overflow-x: auto;
   overflow-y: auto;
 }
 
@@ -21,11 +32,12 @@ body {
 
 .container {
   max-width: 1400px;
+  min-width: 600px;
   margin: 0 auto;
   background: white;
   border-radius: 15px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid rgba(226, 232, 240, 0.8);
   width: 100%;
 }
@@ -42,10 +54,12 @@ header {
   color: white;
   padding: 10px 20px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  min-width: 600px;
 }
 
 .header-left {
@@ -62,6 +76,13 @@ header {
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 1200px) {
+  .header-logo {
+    width: 80px;
+    height: 80px;
+  }
 }
 
 .about-logo {
@@ -111,7 +132,15 @@ header {
 
 .header-buttons {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+@media (max-width: 1200px) {
+  .header-buttons button {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
 }
 
 /* Main */
@@ -120,6 +149,14 @@ main {
   grid-template-columns: 2fr 1fr;
   gap: 20px;
   padding: 20px;
+  overflow: auto;
+}
+
+@media (max-width: 1200px) {
+  main {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -152,7 +189,9 @@ section h2 {
 
 .venta-section {
   overflow-y: auto;
+  overflow-x: auto;
   padding-right: 10px;
+  max-height: none;
 }
 
 .venta-section::-webkit-scrollbar {
@@ -434,6 +473,8 @@ button:disabled {
   padding: 20px;
   border-radius: 10px;
   margin-top: 20px;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .ticket-container h3 {
@@ -443,6 +484,7 @@ button:disabled {
 
 table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   background: white;
   border-radius: 8px;
@@ -523,6 +565,12 @@ tbody tr:hover {
   grid-template-columns: 1fr 1fr;
   gap: 15px;
   margin-top: 20px;
+}
+
+@media (max-width: 800px) {
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
 }
 
 .action-buttons button {
@@ -644,8 +692,9 @@ tbody tr:hover {
   border-radius: 15px;
   width: 90%;
   max-width: 800px;
+  min-width: 400px;
   max-height: 90vh;
-  overflow: hidden;
+  overflow: auto;
   box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
   animation: modalSlideIn 0.3s ease-out;
 }
@@ -694,6 +743,7 @@ tbody tr:hover {
 .modal-body {
   padding: 30px;
   overflow-y: auto;
+  overflow-x: auto;
   max-height: calc(90vh - 80px);
 }
 
@@ -714,6 +764,12 @@ tbody tr:hover {
   grid-template-columns: 1fr 1fr;
   gap: 15px;
   margin-top: 20px;
+}
+
+@media (max-width: 800px) {
+  .form-buttons {
+    grid-template-columns: 1fr;
+  }
 }
 
 .productos-list h3 {
@@ -777,6 +833,12 @@ tbody tr:hover {
   margin-top: 30px;
   padding-top: 20px;
   border-top: 2px solid #eee;
+}
+
+@media (max-width: 800px) {
+  .config-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .config-actions button {
