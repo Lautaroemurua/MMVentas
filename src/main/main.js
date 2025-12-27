@@ -224,11 +224,31 @@ function createWindow() {
 autoUpdater.autoDownload = false;
 
 autoUpdater.on('update-available', (info) => {
+  // Obtener notas de la release (si están disponibles)
+  let releaseNotes = '';
+  if (info.releaseNotes) {
+    if (typeof info.releaseNotes === 'string') {
+      releaseNotes = info.releaseNotes;
+    } else if (Array.isArray(info.releaseNotes)) {
+      releaseNotes = info.releaseNotes.map(note => note.note).join('\n');
+    }
+  }
+  
+  // Limitar la longitud de las notas para que no sea muy largo
+  const maxLength = 500;
+  if (releaseNotes.length > maxLength) {
+    releaseNotes = releaseNotes.substring(0, maxLength) + '...';
+  }
+  
+  const detailText = releaseNotes 
+    ? `${releaseNotes}\n\n¿Desea descargar e instalar la actualización?`
+    : '¿Desea descargar e instalar la actualización?';
+  
   dialog.showMessageBox(mainWindow, {
     type: 'info',
     title: 'Actualización disponible',
     message: `Nueva versión ${info.version} disponible`,
-    detail: '¿Desea descargar e instalar la actualización?',
+    detail: detailText,
     buttons: ['Descargar', 'Más tarde']
   }).then((result) => {
     if (result.response === 0) {
@@ -529,6 +549,7 @@ ipcMain.handle('imprimir-ticket', (event, { venta }) => {
       <div class="footer">
         <div class="gracias">${piePagina.toUpperCase()}</div>
         <div>${nombreNegocio}</div>
+        <div style="margin-top: 10px; font-size: 9px; color: #666; font-style: italic;">DOCUMENTO NO VÁLIDO COMO FACTURA</div>
       </div>
     </body>
     </html>

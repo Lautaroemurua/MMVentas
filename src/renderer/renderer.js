@@ -117,6 +117,60 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
+// Confirmación con toast (retorna una Promise)
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast warning';
+    toast.style.minWidth = '350px';
+    toast.style.maxWidth = '500px';
+    
+    toast.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="toast-icon">⚠️</span>
+          <span class="toast-message" style="flex: 1;">${message}</span>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn-confirm-cancel" style="padding: 6px 16px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Cancelar</button>
+          <button class="btn-confirm-ok" style="padding: 6px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Confirmar</button>
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    const btnOk = toast.querySelector('.btn-confirm-ok');
+    const btnCancel = toast.querySelector('.btn-confirm-cancel');
+    
+    const removeToast = () => {
+      toast.style.animation = 'slideOutRight 0.3s ease-in';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    };
+    
+    btnOk.onclick = () => {
+      removeToast();
+      resolve(true);
+    };
+    
+    btnCancel.onclick = () => {
+      removeToast();
+      resolve(false);
+    };
+    
+    // Auto-cancelar después de 10 segundos
+    setTimeout(() => {
+      removeToast();
+      resolve(false);
+    }, 10000);
+  });
+}
+
 // Inicializar aplicación
 async function init() {
   await cargarProductos();
@@ -849,8 +903,9 @@ function actualizarTablaTicket() {
 }
 
 // Cancelar venta
-function cancelarVenta() {
-  if (confirm('¿Está seguro de cancelar la venta actual?')) {
+async function cancelarVenta() {
+  const confirmado = await showConfirm('¿Está seguro de cancelar la venta actual?');
+  if (confirmado) {
     ticketActual = [];
     actualizarTablaTicket();
     
@@ -1008,7 +1063,8 @@ async function eliminarProducto(id) {
   const producto = productos.find(p => p.id === id);
   if (!producto) return;
 
-  if (confirm(`¿Está seguro de eliminar "${producto.nombre}"?`)) {
+  const confirmado = await showConfirm(`¿Está seguro de eliminar "${producto.nombre}"?`);
+  if (confirmado) {
     try {
       await window.api.eliminarProducto(id);
       await cargarProductos();
@@ -1238,7 +1294,8 @@ async function eliminarModificador(id) {
   const mod = modificadores.find(m => m.id === id);
   if (!mod) return;
 
-  if (confirm(`¿Está seguro de eliminar "${mod.nombre}"?`)) {
+  const confirmado = await showConfirm(`¿Está seguro de eliminar "${mod.nombre}"?`);
+  if (confirmado) {
     try {
       await window.api.eliminarModificador(id);
       await cargarModificadores();
@@ -1346,7 +1403,8 @@ function mostrarOpcionesPredefinidas() {
     btn.addEventListener('click', async function() {
       const id = parseInt(this.dataset.id);
       const nombre = this.dataset.nombre;
-      if (confirm(`¿Eliminar la opción "${nombre}"?`)) {
+      const confirmado = await showConfirm(`¿Eliminar la opción "${nombre}"?`);
+      if (confirmado) {
         try {
           await window.api.eliminarOpcionPredefinida(id);
           await cargarOpcionesPredefinidas();
@@ -1518,7 +1576,8 @@ window.editarProductoEscaneado = function() {
 window.eliminarProductoEscaneado = async function() {
   if (!productoEscaneado) return;
   
-  if (confirm(`¿Está seguro de eliminar "${productoEscaneado.nombre}"?\n\nEsto eliminará el producto de forma permanente.`)) {
+  const confirmado = await showConfirm(`¿Está seguro de eliminar "${productoEscaneado.nombre}"? Esto eliminará el producto de forma permanente.`);
+  if (confirmado) {
     try {
       await window.api.eliminarProducto(productoEscaneado.id);
       await cargarProductos();
