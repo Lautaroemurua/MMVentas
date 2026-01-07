@@ -86,6 +86,17 @@ const btnGuardarProductoMods = document.getElementById('btn-guardar-producto-mod
 const btnCancelarProductoMods = document.getElementById('btn-cancelar-producto-mods');
 let productoIdParaModificadores = null;
 
+// Modal de pago
+const modalPago = document.getElementById('modal-pago');
+const btnCerrarModalPago = document.getElementById('btn-cerrar-modal-pago');
+const pagoTotal = document.getElementById('pago-total');
+const pagoMetodo = document.getElementById('pago-metodo');
+const pagoMonto = document.getElementById('pago-monto');
+const pagoVuelto = document.getElementById('pago-vuelto');
+const vueltoContainer = document.getElementById('vuelto-container');
+const btnCancelarPago = document.getElementById('btn-cancelar-pago');
+const btnConfirmarPago = document.getElementById('btn-confirmar-pago');
+
 // Variables para detección de escaneo de código de barras
 let barcodeScanBuffer = '';
 let barcodeScanTimeout = null;
@@ -122,19 +133,19 @@ function showConfirm(message) {
   return new Promise((resolve) => {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = 'toast warning';
+    toast.className = 'toast confirm';
     toast.style.minWidth = '350px';
     toast.style.maxWidth = '500px';
     
     toast.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <span class="toast-icon">⚠️</span>
+          <span class="toast-icon">❓</span>
           <span class="toast-message" style="flex: 1;">${message}</span>
         </div>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <button class="btn-confirm-cancel" style="padding: 6px 16px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Cancelar</button>
-          <button class="btn-confirm-ok" style="padding: 6px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Confirmar</button>
+          <button class="btn-confirm-cancel btn-danger" style="padding: 6px 16px; font-size: 13px;">Cancelar</button>
+          <button class="btn-confirm-ok btn-success" style="padding: 6px 16px; font-size: 13px;">Confirmar</button>
         </div>
       </div>
     `;
@@ -642,7 +653,7 @@ function configurarEventos() {
   btnCancelar.addEventListener('click', cancelarVenta);
 
   // Finalizar venta
-  btnFinalizar.addEventListener('click', finalizarVenta);
+  btnFinalizar.addEventListener('click', abrirModalPago);
 
   // Modal de productos
   btnGestionarProductos.addEventListener('click', () => {
@@ -924,20 +935,47 @@ async function finalizarVenta() {
   if (ticketActual.length === 0) return;
 
   const total = ticketActual.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+  
+  // Obtener datos de pago si el modal está abierto
+  let pagoCon = null;
+  let vuelto = null;
+  let metodoPago = 'Efectivo';
+  
+  if (modalPago && modalPago.style.display === 'flex') {
+    metodoPago = pagoMetodo.value;
+    const monto = parseFloat(pagoMonto.value);
+    if (!isNaN(monto)) {
+      pagoCon = monto;
+      vuelto = monto - total;
+    }
+  }
 
   try {
     // Guardar venta
     const venta = await window.api.guardarVenta({
       items: ticketActual,
-      total: total
+      total: total,
+      metodoPago: metodoPago,
+      pagoCon: pagoCon,
+      vuelto: vuelto
     });
+    
+    // Cerrar modal de pago si está abierto
+    if (modalPago) modalPago.style.display = 'none';
 
     // Limpiar ticket inmediatamente
     ticketActual = [];
     actualizarTablaTicket();
 
+    // Preparar objeto para impresión con datos de pago
+    const ventaParaImprimir = {
+      ...venta,
+      pagoCon: pagoCon,
+      vuelto: vuelto
+    };
+
     // Imprimir ticket (en segundo plano)
-    window.api.imprimirTicket({ venta }).catch(err => {
+    window.api.imprimirTicket({ venta: ventaParaImprimir }).catch(err => {
       console.error('Error al imprimir:', err);
     });
 
@@ -984,16 +1022,60 @@ async function cargarHistorialVentas() {
             <div>${venta.items.length} producto(s)</div>
             <div class="venta-total">$${venta.total.toFixed(2)}</div>
           </div>
-          <button class="btn-reimprimir" data-id="${venta.id}">Reimprimir</button>
+          <div class="venta-actions">
+            <button class="btn-editar-ticket" data-id="${venta.id}">Editar</button>
+            <button class="btn-reimprimir" data-id="${venta.id}">Reimprimir</button>
+          </div>
         </div>
       `;
     }).join('');
 
-    // Eventos para reimprimir (usar onclick para evitar duplicados)
+    // Eventos para reimprimir
     document.querySelectorAll('.btn-reimprimir').forEach(btn => {
       btn.onclick = async () => {
         const venta = await window.api.obtenerVenta(parseInt(btn.dataset.id));
         await window.api.imprimirTicket({ venta });
+      };
+    });
+
+    // Eventos para editar ticket
+    document.querySelectorAll('.btn-editar-ticket').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const id = parseInt(btn.dataset.id);
+          const venta = await window.api.obtenerVenta(id);
+          
+          if (!venta) {
+            showToast('No se pudo cargar la venta', 'error');
+            return;
+          }
+
+          if (ticketActual.length > 0) {
+            const confirm = await showConfirm('Hay una venta en curso. ¿Desea descartarla y cargar este ticket para editar?');
+            if (!confirm) return;
+          }
+
+          // Cargar items al ticket actual
+          // Aseguramos conversión de tipos por si acaso
+          ticketActual = venta.items.map(item => ({
+            id: item.producto_id || item.id, // Manejar variaciones de nombre de campo si existen
+            nombre: item.nombre,
+            precio: parseFloat(item.precio_unitario || item.precio),
+            cantidad: parseInt(item.cantidad),
+            codigo_barras: item.codigo_barras || ''
+          }));
+
+          actualizarTablaTicket();
+          showToast(`Ticket #${id} cargado. Puede modificarlo y facturar de nuevo.`, 'success');
+          
+          // Scroll hacia arriba para ver la venta
+          const section = document.querySelector('.venta-section') || document.querySelector('.ticket-container');
+          if (section) section.scrollIntoView({ behavior: 'smooth' });
+          
+        } catch (error) {
+          console.error('Error al cargar ticket para edición:', error);
+          showToast('Error al cargar el ticket', 'error');
+        }
       };
     });
   } catch (error) {
@@ -1719,6 +1801,188 @@ if (linkSupport) {
   linkSupport.addEventListener('click', (e) => {
     e.preventDefault();
     require('electron').shell.openExternal('mailto:soporte@mmtech.com.ar?subject=Soporte MMVentas');
+  });
+}
+
+// ============================================
+// MODAL DE PAGO
+// ============================================
+
+function abrirModalPago() {
+  if (ticketActual.length === 0) return;
+
+  const total = ticketActual.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+  pagoTotal.textContent = `$${total.toFixed(2)}`;
+  pagoMetodo.value = 'Efectivo';
+  pagoMonto.value = '';
+  pagoMonto.readOnly = false;
+  pagoVuelto.textContent = '$0.00';
+  pagoVuelto.style.color = '#333'; // Reset color
+  vueltoContainer.style.display = 'block';
+  btnConfirmarPago.disabled = true;
+
+  modalPago.style.display = 'flex';
+  
+  // Dar foco al input de monto después de un breve retardo
+  setTimeout(() => {
+    pagoMonto.focus();
+  }, 100);
+}
+
+function cerrarModalPago() {
+  modalPago.style.display = 'none';
+  productoBuscar.focus();
+}
+
+function calcularVuelto() {
+  const total = ticketActual.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+  const monto = parseFloat(pagoMonto.value);
+
+  if (isNaN(monto)) {
+    pagoVuelto.textContent = '$0.00';
+    btnConfirmarPago.disabled = true;
+    return;
+  }
+
+  const vuelto = monto - total;
+  pagoVuelto.textContent = `$${vuelto.toFixed(2)}`;
+
+  if (vuelto >= 0) {
+    pagoVuelto.style.color = 'green';
+    btnConfirmarPago.disabled = false;
+  } else {
+    pagoVuelto.style.color = 'red';
+    btnConfirmarPago.disabled = true;
+  }
+}
+
+// Eventos del modal de pago
+btnCerrarModalPago.addEventListener('click', cerrarModalPago);
+btnCancelarPago.addEventListener('click', cerrarModalPago);
+
+pagoMetodo.addEventListener('change', () => {
+  const metodo = pagoMetodo.value;
+  const total = ticketActual.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+
+  if (metodo !== 'Efectivo') {
+    // Para pagos no efectivos, el cobro es exacto
+    vueltoContainer.style.display = 'none';
+    pagoMonto.value = total.toFixed(2);
+    pagoMonto.readOnly = true;
+    
+    // Habilitar botón directamente
+    btnConfirmarPago.disabled = false;
+  } else {
+    // Para efectivo, mostrar vuelto y permitir editar
+    vueltoContainer.style.display = 'block';
+    pagoMonto.readOnly = false;
+    pagoMonto.value = '';
+    
+    calcularVuelto(); // Recalcular (deshabilitará el botón si está vacío)
+    pagoMonto.focus();
+  }
+});
+
+pagoMonto.addEventListener('input', calcularVuelto);
+
+pagoMonto.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (!btnConfirmarPago.disabled) {
+      finalizarVenta();
+    }
+  }
+});
+
+btnConfirmarPago.addEventListener('click', finalizarVenta);
+
+modalPago.addEventListener('click', (e) => {
+  if (e.target === modalPago) {
+    cerrarModalPago();
+  }
+});
+
+// ============================================
+// MODAL CERRAR CAJA
+// ============================================
+const modalCerrarCaja = document.getElementById('modal-cerrar-caja');
+const btnCerrarCaja = document.getElementById('btn-cerrar-caja');
+const btnCerrarModalCaja = document.getElementById('btn-cerrar-modal-caja');
+const btnCancelarCaja = document.getElementById('btn-cancelar-caja');
+const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
+const cajaVentasCount = document.getElementById('caja-ventas-count');
+const cajaTotalMonto = document.getElementById('caja-total-monto');
+const cajeroNombre = document.getElementById('cajero-nombre');
+const cajaTurno = document.getElementById('caja-turno');
+
+function abrirModalCaja() {
+  window.api.obtenerVentasHoy()
+    .then(ventas => {
+      const count = ventas.length;
+      const total = ventas.reduce((sum, venta) => sum + parseFloat(venta.total), 0);
+      
+      if (cajaVentasCount) cajaVentasCount.textContent = count;
+      if (cajaTotalMonto) cajaTotalMonto.textContent = `$${total.toFixed(2)}`;
+      
+      if (cajeroNombre) cajeroNombre.value = '';
+      if (cajaTurno) cajaTurno.value = 'Mañana';
+      
+      if (modalCerrarCaja) modalCerrarCaja.style.display = 'flex';
+      if (cajeroNombre) setTimeout(() => cajeroNombre.focus(), 100);
+    })
+    .catch(err => {
+      console.error('Error al obtener ventas de hoy:', err);
+      showToast('Error al obtener datos de caja', 'error');
+    });
+}
+
+function cerrarModalCaja() {
+  if (modalCerrarCaja) modalCerrarCaja.style.display = 'none';
+}
+
+if (btnCerrarCaja) {
+  btnCerrarCaja.addEventListener('click', abrirModalCaja);
+}
+
+if (btnCerrarModalCaja) btnCerrarModalCaja.addEventListener('click', cerrarModalCaja);
+if (btnCancelarCaja) btnCancelarCaja.addEventListener('click', cerrarModalCaja);
+
+if (btnConfirmarCierre) {
+  btnConfirmarCierre.addEventListener('click', async () => {
+    const nombre = cajeroNombre.value.trim();
+    if (!nombre) {
+      showToast('Por favor ingrese el nombre del cajero', 'error');
+      return;
+    }
+    
+    const confirm = await showConfirm(`¿Confirmar cierre de caja?\nCajero: ${nombre}\nTurno: ${cajaTurno.value}`);
+    
+    if (confirm) {
+      const dataCierre = {
+        cajero: nombre,
+        turno: cajaTurno.value,
+        cantidadVentas: cajaVentasCount.textContent,
+        totalRecaudado: cajaTotalMonto.textContent.replace('$', '')
+      };
+
+      try {
+        await window.api.imprimirCierreCaja({ data: dataCierre });
+        showToast('Caja cerrada y ticket impreso', 'success');
+      } catch (err) {
+        console.error('Error al imprimir cierre:', err);
+        showToast('Caja cerrada pero falló la impresión', 'warning');
+      }
+      
+      cerrarModalCaja();
+    }
+  });
+}
+
+if (modalCerrarCaja) {
+  modalCerrarCaja.addEventListener('click', (e) => {
+    if (e.target === modalCerrarCaja) {
+      cerrarModalCaja();
+    }
   });
 }
 
