@@ -23,6 +23,7 @@
         <div id="trial-info" class="trial-info-compact" style="display: none;"></div>
         <div class="header-buttons">
           <button id="btn-modificadores" class="btn-secondary">📝 Modificadores</button>
+          <button id="btn-cerrar-caja" class="btn-secondary">🔒 Cerrar Caja</button>
           <button id="btn-configuracion" class="btn-secondary">⚙️ Configuración</button>
           <button id="btn-gestionar-productos" class="btn-secondary">Gestionar Productos</button>
           <button id="btn-acerca-de" class="btn-secondary">ⓘ Acerca de</button>
@@ -150,6 +151,56 @@
     </div>
   </div>
 
+  <!-- Modal de Pago -->
+  <div id="modal-pago" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h2>💰 Finalizar Venta</h2>
+        <button class="btn-close" id="btn-cerrar-modal-pago">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="pago-resumen-modal">
+          <div class="pago-row-modal">
+            <span class="pago-label-modal">Total a Pagar:</span>
+            <span class="pago-value-modal total-modal" id="pago-total">$0.00</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin: 20px 0 10px 0;">
+          <label for="pago-metodo" style="font-size: 16px; font-weight: bold;">Método de Pago:</label>
+          <select id="pago-metodo" class="form-control" style="font-size: 16px; padding: 8px;">
+            <option value="Efectivo" selected>💵 Efectivo</option>
+            <option value="Transferencia">🏦 Transferencia</option>
+            <option value="QR">📱 QR</option>
+            <option value="Tarjeta">💳 Tarjeta</option>
+            <option value="Débito">💳 Débito</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin: 10px 0 20px 0;">
+          <label for="pago-monto" style="font-size: 16px; font-weight: bold;">Monto Abonado:</label>
+          <div class="input-prefix-wrapper-modal">
+            <span class="input-prefix-modal">$</span>
+            <input type="number" id="pago-monto" class="form-control pago-input-modal" placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+
+        <div class="pago-resumen-modal" id="vuelto-container">
+          <div class="pago-row-modal">
+            <span class="pago-label-modal">Vuelto:</span>
+            <span class="pago-value-modal vuelto-modal" id="pago-vuelto">$0.00</span>
+          </div>
+        </div>
+
+        <div class="modal-buttons-modal" style="margin-top: 25px;">
+          <button class="btn-danger" id="btn-cancelar-pago">Cancelar</button>
+          <button class="btn-success" id="btn-confirmar-pago" disabled>✅ Confirmar e Imprimir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de Configuración -->
   <div id="modal-configuracion" class="modal">
     <div class="modal-content">
@@ -191,7 +242,7 @@
         </div>
 
         <div class="config-actions">
-          <button class="btn-secondary" id="btn-cancelar-config">Cancelar</button>
+          <button class="btn-danger" id="btn-cancelar-config">Cancelar</button>
           <button class="btn-success" id="btn-guardar-config">Guardar Configuración</button>
         </div>
       </div>
@@ -254,7 +305,7 @@
           </div>
 
           <div class="form-buttons">
-            <button id="btn-cancelar-mod" class="btn-secondary">Cancelar</button>
+            <button id="btn-cancelar-mod" class="btn-danger">Cancelar</button>
             <button id="btn-guardar-modificador" class="btn-primary">Guardar Modificador</button>
           </div>
         </div>
@@ -312,7 +363,7 @@
           </div>
           
           <div class="form-buttons">
-            <button id="btn-cancelar-edit" class="btn-secondary">Cancelar</button>
+            <button id="btn-cancelar-edit" class="btn-danger">Cancelar</button>
             <button id="btn-guardar-producto" class="btn-primary">Guardar Producto</button>
           </div>
         </div>
@@ -427,6 +478,47 @@
           <p class="about-copyright">
             © 2025 MM Tech. Todos los derechos reservados.
           </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cerrar Caja -->
+  <div id="modal-cerrar-caja" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🔒 Cerrar Caja</h2>
+        <button class="btn-close" id="btn-cerrar-modal-caja">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="caja-resumen-container">
+          <div class="caja-resumen-item">
+            <span class="caja-resumen-label">Ventas del Día:</span>
+            <span id="caja-ventas-count" class="caja-resumen-value">0</span>
+          </div>
+          <div class="caja-resumen-item total">
+            <span class="caja-resumen-label">Total Recaudado:</span>
+            <span id="caja-total-monto" class="caja-resumen-value">$0.00</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="cajero-nombre">Nombre del Cajero:</label>
+          <input type="text" id="cajero-nombre" class="form-control" placeholder="Ingrese su nombre">
+        </div>
+        
+        <div class="form-group">
+          <label for="caja-turno">Turno:</label>
+          <select id="caja-turno" class="form-control">
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noche">Noche</option>
+          </select>
+        </div>
+        
+        <div class="form-buttons">
+          <button id="btn-cancelar-caja" class="btn-danger">Cancelar</button>
+          <button id="btn-confirmar-cierre" class="btn-primary">Confirmar Cierre</button>
         </div>
       </div>
     </div>

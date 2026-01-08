@@ -12,10 +12,12 @@ contextBridge.exposeInMainWorld('api', {
   // Ventas
   guardarVenta: (venta) => ipcRenderer.invoke('guardar-venta', venta),
   obtenerVentas: () => ipcRenderer.invoke('obtener-ventas'),
+  obtenerVentasHoy: () => ipcRenderer.invoke('obtener-ventas-hoy'),
   obtenerVenta: (id) => ipcRenderer.invoke('obtener-venta', id),
 
   // Imprimir
   imprimirTicket: (data) => ipcRenderer.invoke('imprimir-ticket', data),
+  imprimirCierreCaja: (data) => ipcRenderer.invoke('imprimir-cierre-caja', data),
 
   // Licencia
   activarSistema: (codigo) => ipcRenderer.invoke('activar-sistema', codigo),

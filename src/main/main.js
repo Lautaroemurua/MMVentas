@@ -43,9 +43,23 @@ function initDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fecha TEXT NOT NULL,
       items TEXT NOT NULL,
-      total REAL NOT NULL
+      total REAL NOT NULL,
+      metodo_pago TEXT DEFAULT 'Efectivo',
+      pago_con REAL DEFAULT 0,
+      vuelto REAL DEFAULT 0
     )
   `);
+
+  // Agregar columnas nuevas a ventas si no existen
+  try {
+    db.exec(`ALTER TABLE ventas ADD COLUMN metodo_pago TEXT DEFAULT 'Efectivo'`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE ventas ADD COLUMN pago_con REAL DEFAULT 0`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE ventas ADD COLUMN vuelto REAL DEFAULT 0`);
+  } catch (e) {}
 
   // Crear tabla de configuración
   db.exec(`
@@ -139,6 +153,8 @@ async function checkAndShowLicense() {
         }
       });
     } else {
+      console.error('Error de licencia crítico:', licenseStatus);
+      dialog.showErrorBox('Error de Licencia', 'La licencia es inválida o el sistema no está autorizado.\n\n' + (licenseStatus.message || 'Error desconocido'));
       app.quit();
     }
   } else if (licenseStatus.trial) {
@@ -338,25 +354,39 @@ ipcMain.handle('eliminar-producto', (event, id) => {
 });
 
 // IPC Handlers - Ventas
-ipcMain.handle('guardar-venta', (event, { items, total }) => {
+ipcMain.handle('guardar-venta', (event, { items, total, metodoPago, pagoCon, vuelto }) => {
   const fecha = new Date().toLocaleString('es-ES', { 
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false 
   });
   const itemsJson = JSON.stringify(items);
-  const insert = db.prepare('INSERT INTO ventas (fecha, items, total) VALUES (?, ?, ?)');
-  const result = insert.run(fecha, itemsJson, total);
+  const insert = db.prepare('INSERT INTO ventas (fecha, items, total, metodo_pago, pago_con, vuelto) VALUES (?, ?, ?, ?, ?, ?)');
+  const result = insert.run(fecha, itemsJson, total, metodoPago || 'Efectivo', pagoCon || 0, vuelto || 0);
   return { 
     id: result.lastInsertRowid, 
     fecha, 
     items, 
-    total 
+    total,
+    metodo_pago: metodoPago || 'Efectivo',
+    pago_con: pagoCon || 0,
+    vuelto: vuelto || 0
   };
 });
 
 ipcMain.handle('obtener-ventas', () => {
   const ventas = db.prepare('SELECT * FROM ventas ORDER BY fecha DESC LIMIT 100').all();
+  return ventas.map(venta => ({
+    ...venta,
+    items: JSON.parse(venta.items)
+  }));
+});
+
+ipcMain.handle('obtener-ventas-hoy', () => {
+  const today = new Date().toLocaleDateString('es-ES', { 
+    year: 'numeric', month: '2-digit', day: '2-digit' 
+  });
+  const ventas = db.prepare('SELECT * FROM ventas WHERE fecha LIKE ? ORDER BY fecha DESC').all(`${today}%`);
   return ventas.map(venta => ({
     ...venta,
     items: JSON.parse(venta.items)
@@ -463,121 +493,216 @@ ipcMain.handle('imprimir-ticket', (event, { venta }) => {
         table {
           width: 100%;
           border-collapse: collapse;
-          margin: 8px 0;
+          margin: 5px 0;
         }
         
         td {
-          padding: 2px 0;
+          padding: 3px 0;
           vertical-align: top;
-        }
-        
-        .producto-nombre {
-          font-weight: bold;
-          padding-top: 6px;
         }
         
         .align-right {
           text-align: right;
         }
         
-        .totales {
-          border-top: 2px solid #000;
-          margin-top: 10px;
-          padding-top: 8px;
+        .producto-nombre {
+          font-weight: bold;
         }
         
-        .total-row {
+        .total-section {
+          margin-top: 10px;
+          border-top: 2px dashed #000;
+          padding-top: 5px;
+        }
+        
+        .total-line {
           display: flex;
           justify-content: space-between;
-          margin: 5px 0;
-          font-size: 12px;
+          font-size: 14px;
+          font-weight: bold;
+          margin: 3px 0;
         }
         
-        .total-final {
-          font-size: 16px;
-          font-weight: bold;
-          border-top: 2px solid #000;
-          padding-top: 8px;
-          margin-top: 8px;
+        .vuelto-line {
+          display: flex;
+          justify-content: space-between;
+          font-size: 11px;
+          margin-top: 3px;
+        }
+
+        .metodo-pago-line {
+          text-align: right;
+          font-size: 11px;
+          margin-top: 3px;
+          font-style: italic;
         }
         
         .footer {
-          text-align: center;
           margin-top: 15px;
-          padding-top: 10px;
-          border-top: 2px dashed #000;
+          text-align: center;
           font-size: 10px;
         }
-        
-        .gracias {
-          font-weight: bold;
-          margin: 8px 0;
+
+        .logo {
+          max-width: 120px;
+          max-height: 80px;
+          margin-bottom: 5px;
         }
       </style>
     </head>
     <body>
       <div class="ticket-header">
-        ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="max-width: 60mm; max-height: 30mm; margin-bottom: 8px;">` : ''}
-        <h1>${nombreNegocio.toUpperCase()}</h1>
-        <div style="font-size: 10px; margin-top: 5px;">TICKET DE VENTA</div>
+        ${logoBase64 ? `<img src="${logoBase64}" class="logo">` : ''}
+        <h1>${nombreNegocio}</h1>
+        <div class="info">
+          <div class="info-line">Fecha: ${fecha}</div>
+          <div class="info-line">Ticket #${venta.id}</div>
+        </div>
       </div>
-      
-      <div class="info">
-        <div class="info-line"><strong>Ticket #${String(venta.id).padStart(6, '0')}</strong></div>
-        <div class="info-line">${fecha}</div>
-      </div>
-      
-      <div class="separator"></div>
       
       <table>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
+        ${itemsHtml}
       </table>
       
-      <div class="totales">
-        <div class="total-row">
-          <span>Items:</span>
-          <span>${venta.items.reduce((sum, item) => sum + item.cantidad, 0)}</span>
-        </div>
-        <div class="total-row total-final">
-          <span>TOTAL:</span>
+      <div class="total-section">
+        <div class="total-line">
+          <span>TOTAL</span>
           <span>$${venta.total.toFixed(2)}</span>
         </div>
+        ${venta.metodo_pago ? `
+        <div class="metodo-pago-line">
+          Pago con ${venta.metodo_pago}: $${(parseFloat(venta.pago_con) || venta.total).toFixed(2)}
+        </div>
+        ` : ''}
+        ${venta.vuelto > 0 ? `
+        <div class="vuelto-line">
+          <span>Vuelto:</span>
+          <span>$${venta.vuelto.toFixed(2)}</span>
+        </div>
+        ` : ''}
       </div>
       
       <div class="footer">
-        <div class="gracias">${piePagina.toUpperCase()}</div>
-        <div>${nombreNegocio}</div>
-        <div style="margin-top: 10px; font-size: 9px; color: #666; font-style: italic;">DOCUMENTO NO VÁLIDO COMO FACTURA</div>
+        <p>${piePagina}</p>
+        <p>*** COPIA CLIENTE ***</p>
       </div>
     </body>
     </html>
   `;
 
   printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(ticketHtml)}`);
-
-  return new Promise((resolve, reject) => {
-    printWindow.webContents.on('did-finish-load', () => {
-      printWindow.webContents.print({
-        silent: false,
-        printBackground: true,
-        pageSize: {
-          width: 80000,  // 80mm en micrones
-          height: 297000 // Altura automática (A4 como máximo)
-        },
-        margins: {
-          marginType: 'none'
-        }
-      }, (success, errorType) => {
-        if (!success) {
-          console.error('Error al imprimir:', errorType);
-        }
-        printWindow.close();
-        resolve({ success: success, error: errorType });
-      });
-    });
+  
+  printWindow.webContents.on('did-finish-load', () => {
+    printWindow.webContents.print({ silent: false, printBackground: true });
+    // printWindow.close(); // Opcional: cerrar después de imprimir
   });
+
+  return { success: true };
+});
+
+ipcMain.handle('imprimir-cierre-caja', (event, { data }) => {
+  const printWindow = new BrowserWindow({
+    width: 302,
+    height: 800,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false
+    }
+  });
+
+  const config = db.prepare('SELECT * FROM configuracion WHERE id = 1').get();
+  const nombreNegocio = config?.nombre_negocio || 'Mi Negocio';
+  const logoBase64 = config?.logo_base64 || null;
+  const fecha = new Date().toLocaleString('es-ES', { 
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false 
+  });
+
+  const cierreHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
+        body {
+          font-family: 'Courier New', 'Consolas', monospace;
+          font-size: 11px;
+          margin: 0;
+          padding: 5mm;
+          width: 80mm;
+          background: white;
+        }
+        .header {
+          text-align: center;
+          border-bottom: 2px dashed #000;
+          padding-bottom: 10px;
+          margin-bottom: 10px;
+        }
+        .logo {
+          max-width: 120px;
+          max-height: 80px;
+          margin-bottom: 5px;
+        }
+        h1 { font-size: 18px; margin: 5px 0; font-weight: bold; }
+        h2 { font-size: 14px; margin: 5px 0; border: 1px solid #000; padding: 5px; }
+        .info-row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .section { margin-top: 15px; border-top: 1px dashed #000; padding-top: 10px; }
+        .total-box { 
+          border: 2px solid #000; 
+          padding: 10px; 
+          margin-top: 15px; 
+          text-align: center;
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        ${logoBase64 ? `<img src="${logoBase64}" class="logo">` : ''}
+        <h1>${nombreNegocio}</h1>
+        <h2>CIERRE DE CAJA</h2>
+      </div>
+
+      <div class="info">
+        <div class="info-row"><span>Fecha:</span> <span>${fecha}</span></div>
+        <div class="info-row"><span>Cajero:</span> <span>${data.cajero}</span></div>
+        <div class="info-row"><span>Turno:</span> <span>${data.turno}</span></div>
+      </div>
+
+      <div class="section">
+        <div class="info-row">
+          <span>Cant. Ventas:</span>
+          <span>${data.cantidadVentas}</span>
+        </div>
+      </div>
+
+      <div class="total-box">
+        <div>TOTAL RECAUDADO</div>
+        <div style="font-size: 20px; margin-top: 5px;">$${parseFloat(data.totalRecaudado).toFixed(2)}</div>
+      </div>
+
+      <div class="footer">
+        <p>__________________________</p>
+        <p>Firma Cajero</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(cierreHtml)}`);
+  
+  printWindow.webContents.on('did-finish-load', () => {
+    printWindow.webContents.print({ silent: false, printBackground: true });
+  });
+
+  return { success: true };
 });
 
 // IPC Handlers - Licencia
